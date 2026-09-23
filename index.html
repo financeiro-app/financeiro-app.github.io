@@ -3778,12 +3778,14 @@ ACT.priv = () => {
 // ---------- app instalável ----------
 let INSTALL_EVT = null;
 // app Android (arquivo .apk na página de versões do GitHub; o link "latest" sempre aponta para a versão mais nova)
-const APK_URL = 'https://github.com/financeiro-app/financeiro-app.github.io/releases/latest/download/controle-financeiro.apk';
+const APK_URL = 'download/controle-financeiro.apk'; // arquivo no próprio site (mesmo endereço, sem redirecionamentos)
+const APK_PAGE = 'https://github.com/financeiro-app/financeiro-app.github.io/releases/latest'; // alternativa: página de versões no GitHub
 const isAndroid = () => /android/i.test(navigator.userAgent || '');
 ACT.apkdl = () => openInfo('App para Android', `<p class="mut" style="margin-bottom:12px">É o mesmo app do site, com ícone próprio e abrindo em tela cheia. Você entra com o mesmo e-mail e senha.</p>
   <ol class="steps"><li>Toque em <b>Baixar o app</b>. Se o Chrome avisar sobre o tipo de arquivo, confirme <b>Baixar mesmo assim</b>.</li><li>Abra o arquivo baixado. Na primeira vez, o Android pede para <b>permitir instalar apps desta fonte</b>: permita.</li><li>Toque em <b>Instalar</b> e depois em <b>Abrir</b>.</li></ol>
-  <a class="btn primary" style="width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none" href="${APK_URL}" rel="noopener">${icon('save', 18)} Baixar o app</a>
-  <p class="mut sm" style="margin-top:10px">O Android pede essa permissão porque o app ainda não está na Play Store. Ele só abre este mesmo site, com seus dados na sua conta.</p>`);
+  <a class="btn primary" style="width:100%;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none" href="${APK_URL}" download="controle-financeiro.apk">${icon('save', 18)} Baixar o app</a>
+  <p class="mut sm" style="margin-top:10px">O Android pede essa permissão porque o app ainda não está na Play Store. Ele só abre este mesmo site, com seus dados na sua conta.</p>
+  <p class="mut sm" style="margin-top:8px"><b>Ficou “baixando” sem terminar?</b> Abra o menu do Chrome (⋮) → <b>Downloads</b> e toque em <b>Baixar mesmo assim</b>. Se você abriu este site pelo WhatsApp ou Instagram, abra no Chrome e tente de novo. Outra opção: <a href="${APK_PAGE}" rel="noopener">baixar pela página do GitHub</a>.</p>`);
 const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL_EVT = e; if (UI.tab === 'more' && authUser) render(); });
 window.addEventListener('appinstalled', () => { INSTALL_EVT = null; toast('App instalado'); if (UI.tab === 'more' && authUser) render(); });
