@@ -490,7 +490,14 @@ body.auth #app{padding:0;max-width:none}
 .choice b{display:block;font-weight:600}
 .choice small{color:var(--mut);font-size:12.5px}
 .logo{width:34px;height:34px;flex:none}
-.auth.ob .auth-side h1{max-width:18ch}
+.auth.ob .auth-side h1{max-width:18ch;font-size:34px}
+.auth.ob .auth-side{padding-bottom:58px}
+.auth.ob .auth-main{padding:0 10px 32px}
+.auth.ob .auth-card{max-width:640px;padding:26px 20px 22px}
+.auth.ob .auth-card h3{font-size:31px}
+.auth.ob .auth-card .sub{font-size:15px}
+.obrowh{display:grid;grid-template-columns:minmax(0,1fr) 128px 34px;gap:8px;font-size:12px;font-weight:600;color:var(--mut);margin:0 0 6px;padding:0 4px}
+.obrowh span:last-child{grid-column:2}
 .obtop{display:flex;align-items:center;gap:10px;margin:-6px 0 16px}
 .obtop .ib{margin-left:-8px;flex:none}
 .obtop .obdots{flex:1;margin:0}
@@ -614,6 +621,16 @@ body.auth #app{padding:0;max-width:none}
   .auth-main{margin:0;display:grid;place-items:center;padding:48px clamp(32px,6vw,96px)}
   .auth-card{width:100%;max-width:420px;padding:40px 36px 32px;background:var(--card);border:1px solid color-mix(in srgb,var(--line) 60%,transparent);box-shadow:var(--shadow-lg)}
   .auth-card h3{font-size:34px}
+  #app .auth.ob{grid-template-columns:minmax(360px,.72fr) minmax(0,1.28fr)}
+  .auth.ob .auth-side h1{font-size:clamp(46px,4.2vw,62px)}
+  .auth.ob .auth-main{padding:48px clamp(28px,5vw,80px)}
+  .auth.ob .auth-card{max-width:640px;padding:44px 48px 38px}
+  .auth.ob .auth-card h3{font-size:42px}
+  .auth.ob .auth-card .sub{font-size:16px;margin-bottom:26px}
+  .auth.ob .obrow,.auth.ob .obrowh{grid-template-columns:minmax(0,1fr) 170px 36px}
+  .auth.ob .choice{padding:18px}
+  .auth.ob .obtip b{font-size:15.5px}
+  .auth.ob .obtip small{font-size:13.5px}
   .auth-card .sub{margin-bottom:24px}
   .filterbar{margin:0 0 6px;padding:0 0 4px;flex-wrap:wrap}
   .ext-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
@@ -5429,7 +5446,7 @@ const OB_STEPS = ['sal', 'inc', 'va', 'card', 'fix', 'cx', 'hoje'];
 const OB_BANKS = ['Nubank', 'Itaú', 'Inter', 'Bradesco', 'Caixa', 'Santander', 'Banco do Brasil'];
 const OB_INC = ['Freela', 'Aluguel recebido', 'Pensão', 'Bolsa', 'Renda extra'];
 const OB_FIX = ['Aluguel', 'Condomínio', 'Luz', 'Água', 'Internet', 'Celular', 'Plano de saúde', 'Academia', 'Streaming', 'Escola', 'Financiamento'];
-const OB_CX = ['Reserva de emergência', 'Viagem', 'Casa própria', 'Carro', 'Estudos'];
+const OB_CX = ['Reserva de emergência', 'Viagem', 'Casa própria', 'Carro', 'Estudos', 'Aposentadoria'];
 const OB_TIPS = [
   ['plus', 'Lance o dia a dia', 'Toque no + para registrar um gasto ou uma entrada. Dá para escrever ou falar, tipo “mercado 50”.'],
   ['home', 'Acompanhe o mês', 'A Início mostra quanto sobra no mês e para onde está indo o dinheiro.'],
@@ -5438,7 +5455,7 @@ const OB_TIPS = [
 ];
 const obTipsHtml = () => `<div class="obtips">${OB_TIPS.map(([ic, t, s]) => `<div class="obtip"><span class="ci">${icon(ic, 19)}</span><span><b>${t}</b><small>${s}</small></span></div>`).join('')}</div>`;
 function startOnboard() {
-  OB = { step: 'hi', name: (S.profile && S.profile.name) || userName(), sal: '', inc: [], va: null, vaV: '', vaSep: '1', card: null, cardName: '', closeDay: '', fix: [], cxName: '', cxGoal: '', cxPct: '50', dueDay: '', accName: '', accBal: '', fatOpen: '', fatClosed: '', cxHave: '', err: '' };
+  OB = { step: 'hi', name: (S.profile && S.profile.name) || userName(), sal: '', inc: [], va: null, vaV: '', vaSep: '1', card: null, cardName: '', closeDay: '', fix: [], cx: [], cxPct: '50', dueDay: '', accName: '', accBal: '', fatOpen: '', fatClosed: '', cxHave: '', err: '' };
   renderOnboard();
 }
 const obVal = s => { const n = Core.calc(String(s || '').trim() || '0'); return isNaN(n) ? NaN : n; };
@@ -5462,14 +5479,17 @@ function obApply() {
   const d = parseInt(o.closeDay);
   if (o.card === true && d >= 1 && d <= 28) { S.closeDay = d; if (S.cards && S.cards[0]) { S.cards[0].closeDay = d; if (o.cardName.trim()) S.cards[0].name = o.cardName.trim(); const du = parseInt(o.dueDay); if (du >= 1 && du <= 31) S.cards[0].dueDay = du; } }
   o.fix.forEach(r => { const v = obVal(r.v); if (r.n.trim() && v > 0) add(null, r.n.trim(), 'out', v); });
-  if (o.cxName.trim()) { const g = obVal(o.cxGoal); S.cx.push({ id: nid('c'), name: o.cxName.trim(), mode: +o.cxPct > 0 ? 'direct' : 'none', mult: 1, pct: (+o.cxPct || 0) / 100, start: TODAY, note: '', goal: g > 0 ? { v: Core.round2(g), d: '' } : null }); }
+  // caixinhas: o % da sobra escolhido é dividido igualmente entre elas (dá para mudar em cada uma depois)
+  const cxs = o.cx.filter(r => r.n.trim()), each = cxs.length ? (+o.cxPct || 0) / 100 / cxs.length : 0;
   // ---- onde a pessoa está hoje: nada disso conta como gasto ou guardado do mês, só deixa os saldos em dia ----
-  const have = obVal(o.cxHave);
-  if (have > 0) {
-    let c = o.cxName.trim() ? S.cx.find(x => x.name === o.cxName.trim()) : null;
-    if (!c) { c = { id: nid('c'), name: 'Reserva', mode: 'none', mult: 1, pct: 0, start: TODAY, note: '', goal: null }; S.cx.push(c); }
-    S.ap.push({ id: nid('a'), d: TODAY, cx: c.name, v: Core.round2(have), re: true, ini: true }); // como realocação: aumenta a caixinha sem contar como guardado do mês
-  }
+  const initAp = (name, v) => { if (v > 0) S.ap.push({ id: nid('a'), d: TODAY, cx: name, v: Core.round2(v), re: true, ini: true }); }; // como realocação: aumenta a caixinha sem contar como guardado do mês
+  const part = Math.round(each * 1e4) / 1e4, tot = (+o.cxPct || 0) / 100; // a última fica com o resto: a soma bate com o % escolhido
+  cxs.forEach((r, i) => {
+    const g = obVal(r.v), name = r.n.trim();
+    S.cx.push({ id: nid('c'), name, mode: each > 0 ? 'direct' : 'none', mult: 1, pct: i === cxs.length - 1 ? Math.round((tot - part * i) * 1e4) / 1e4 : part, start: TODAY, note: '', goal: g > 0 ? { v: Core.round2(g), d: '' } : null });
+    initAp(name, obVal(r.h));
+  });
+  if (!cxs.length && obVal(o.cxHave) > 0) { S.cx.push({ id: nid('c'), name: 'Reserva', mode: 'none', mult: 1, pct: 0, start: TODAY, note: '', goal: null }); initAp('Reserva', obVal(o.cxHave)); }
   const card = S.cards && S.cards[0];
   if (o.card === true && card) {
     const fo = obVal(o.fatOpen), fc = obVal(o.fatClosed), openYm = +TODAY.slice(8, 10) < (card.closeDay || 1) ? CUR_YM : Core.addM(CUR_YM, 1);
@@ -5514,7 +5534,7 @@ function obShell(title, sub, body) {
     `<h3>${esc(title)}</h3>${sub ? `<p class="sub">${sub}</p>` : ''}${OB.err ? `<div class="auth-err">${esc(OB.err)}</div>` : ''}${body}`);
 }
 const obMoney = (k, ph = '0,00') => `<div class="amt"><span>R$</span><input class="big" data-ob="${k}" inputmode="numeric" data-money="1" autocomplete="off" placeholder="${ph}" value="${esc(OB[k])}" enterkeyhint="done"></div>`;
-const obRows = k => OB[k].map((r, i) => `<div class="obrow"><input class="in" data-ob="${k}.${i}.n" value="${esc(r.n)}" placeholder="Nome" autocomplete="off" aria-label="Nome"><div class="obv"><span>R$</span><input class="in" data-ob="${k}.${i}.v" inputmode="numeric" data-money="1" value="${esc(r.v)}" placeholder="0,00" autocomplete="off" aria-label="Valor por mês"></div><button class="ib" data-act="obdel" data-k="${k}" data-i="${i}" aria-label="Remover">${icon('x', 15)}</button></div>`).join('');
+const obRows = (k, vLabel = 'Valor por mês', vPh = '0,00') => OB[k].map((r, i) => `<div class="obrow"><input class="in" data-ob="${k}.${i}.n" value="${esc(r.n)}" placeholder="Nome" autocomplete="off" aria-label="Nome"><div class="obv"><span>R$</span><input class="in" data-ob="${k}.${i}.v" inputmode="numeric" data-money="1" value="${esc(r.v)}" placeholder="${vPh}" autocomplete="off" aria-label="${vLabel}"></div><button class="ib" data-act="obdel" data-k="${k}" data-i="${i}" aria-label="Remover">${icon('x', 15)}</button></div>`).join('');
 const obChips = (k, list) => `<div class="chips obchips">${list.filter(n => !OB[k].some(r => norm(r.n) === norm(n))).map(n => `<button type="button" class="chip sm" data-act="obadd" data-k="${k}" data-n="${esc(n)}">${icon('plus', 13)}${esc(n)}</button>`).join('')}<button type="button" class="chip sm ghost" data-act="obadd" data-k="${k}" data-n="">${icon('plus', 13)}Outro</button></div>`;
 const obBtns = (main, mainLabel, alt, altLabel) => `<button class="btn primary auth-btn" data-act="${main}">${mainLabel}</button>${alt ? `<button class="btn ghost auth-alt" data-act="${alt}">${altLabel}</button>` : ''}`;
 function renderOnboard(focus) {
@@ -5548,15 +5568,13 @@ function renderOnboard(focus) {
       (OB.fix.length ? `<div class="obsum"><span>Total por mês</span><b>${brl(t.fix)}</b></div>` : '') +
       `<p class="hint">Conta que cai no cartão, como streaming, você marca depois em Ajustes → Itens fixos.</p>` + obBtns('obnext', OB.fix.length ? 'Continuar' : 'Pular por enquanto'));
   } else if (st === 'cx') {
-    const t = obTotals(), p = +OB.cxPct || 0;
-    obShell('Crie sua primeira caixinha', t.inc > 0 ? `Pelo que você contou, sobram <b>${brl(t.sobra)}</b> por mês antes dos gastos do dia a dia.` : 'Dê um nome e escolha quanto da sobra do mês vai para ela.', `
-      <div class="fld"><label class="fl" for="obCx">Para que é?</label><input class="in" id="obCx" data-ob="cxName" value="${esc(OB.cxName)}" placeholder="Ex.: Reserva de emergência" autocomplete="off"></div>
-      <div class="chips obchips" style="margin-top:-6px">${OB_CX.map(n => `<button type="button" class="chip sm ${OB.cxName === n ? 'on' : ''}" data-act="obcxname" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
-      <div class="fld"><label class="fl">Meta (opcional)</label>${obMoney('cxGoal')}</div>
-      <div class="fld"><label class="fl">Quanto da sobra vai para ela todo mês?</label><div class="seg">${[['25', '25%'], ['50', '50%'], ['100', 'Tudo'], ['0', 'Manual']].map(([v, l]) => `<button type="button" class="${OB.cxPct === v ? 'on' : ''}" data-act="obcxpct" data-v="${v}">${l}</button>`).join('')}</div></div>
-      <p class="hint">${p > 0 && t.sobra > 0 ? `Com a sobra de ${brl(t.sobra)}, cerca de <b>${brl(t.sobra * p / 100)}</b> por mês iriam para ela. ` : ''}No fim do mês, o botão “Distribuir” da Início registra isso para você.</p>` + obBtns('obnext', 'Criar caixinha', 'obnocx', 'Criar depois'));
+    const t = obTotals(), p = +OB.cxPct || 0, n = OB.cx.length, per = t.sobra * p / 100;
+    obShell(n > 1 ? 'Crie suas caixinhas' : 'Crie sua primeira caixinha', (t.inc > 0 ? `Pelo que você contou, sobram <b>${brl(t.sobra)}</b> por mês antes dos gastos do dia a dia. ` : '') + 'Toque para adicionar quantas quiser.', `
+      ${obChips('cx', OB_CX)}
+      ${n ? `<div class="obrowh"><span>Nome</span><span>Meta (opcional)</span></div>${obRows('cx', 'Meta (opcional)', 'Sem meta')}` : ''}
+      ${n ? `<div class="fld" style="margin-top:14px"><label class="fl">Quanto da sobra guardar todo mês?</label><div class="seg">${[['25', '25%'], ['50', '50%'], ['100', 'Tudo'], ['0', 'Manual']].map(([v, l]) => `<button type="button" class="${OB.cxPct === v ? 'on' : ''}" data-act="obcxpct" data-v="${v}">${l}</button>`).join('')}</div></div>
+      <p class="hint">${p > 0 && t.sobra > 0 ? `Cerca de <b>${brl(per)}</b> por mês${n > 1 ? `, dividido igualmente (${brl(per / n)} em cada)` : ' para ela'}. ` : ''}No fim do mês, o botão “Distribuir” da Início registra isso para você.</p>` : ''}` + obBtns('obnext', n > 1 ? `Criar ${n} caixinhas` : n ? 'Criar caixinha' : 'Continuar sem caixinha'));
   } else if (st === 'hoje') {
-    const cxN = OB.cxName.trim();
     obShell('Onde você está hoje?', 'Informe os valores de agora e o app parte deles, sem você lançar o passado. Tudo é opcional.', `
       <div class="obsec"><b>${icon('bank', 16)} Conta do banco</b>
       <div class="fld"><label class="fl" for="obBal">Saldo que o banco mostra hoje</label><div class="obv lg"><span>R$</span><input class="in" id="obBal" data-ob="accBal" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.accBal)}"></div></div>
@@ -5566,8 +5584,8 @@ function renderOnboard(focus) {
       <div class="obpair"><div class="fld"><label class="fl" for="obFo">Fatura aberta até agora</label><div class="obv lg"><span>R$</span><input class="in" id="obFo" data-ob="fatOpen" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.fatOpen)}"></div></div>
       <div class="fld"><label class="fl" for="obFc">Fatura fechada a pagar</label><div class="obv lg"><span>R$</span><input class="in" id="obFc" data-ob="fatClosed" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.fatClosed)}"></div></div></div>
       <p class="hint">Veja no app do cartão. Se a fatura fechada já foi paga, deixe em branco. Daqui pra frente é só lançar as compras novas.</p></div>` : ''}
-      <div class="obsec"><b>${icon('box', 16)} ${cxN ? esc(cxN) : 'Dinheiro guardado'}</b>
-      <div class="fld"><label class="fl" for="obHave">${cxN ? 'Quanto você já tem guardado nela' : 'Já tem algo guardado? Vira a caixinha “Reserva”'}</label><div class="obv lg"><span>R$</span><input class="in" id="obHave" data-ob="cxHave" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.cxHave)}"></div></div>
+      <div class="obsec"><b>${icon('box', 16)} ${OB.cx.length > 1 ? 'Quanto já tem em cada caixinha' : 'Dinheiro guardado'}</b>
+      ${OB.cx.length ? OB.cx.map((r, i) => `<div class="fld"><label class="fl" for="obH${i}">${OB.cx.length > 1 ? esc(r.n) : `Quanto você já tem em “${esc(r.n)}”`}</label><div class="obv lg"><span>R$</span><input class="in" id="obH${i}" data-ob="cx.${i}.h" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(r.h || '')}"></div></div>`).join('') : `<div class="fld"><label class="fl" for="obHave">Já tem algo guardado? Vira a caixinha “Reserva”</label><div class="obv lg"><span>R$</span><input class="in" id="obHave" data-ob="cxHave" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.cxHave)}"></div></div>`}
       <p class="hint">Entra como saldo inicial: não conta como guardado deste mês nem sai da sua conta.</p></div>` + obBtns('obnext', 'Concluir', 'obnohoje', 'Pular, começo do zero'));
   } else if (st === 'done') {
     const t = obTotals(), nm = String(OB.name || '').trim().split(/\s+/)[0];
@@ -5607,8 +5625,12 @@ ACT.obnext = () => {
   else if (st === 'inc' || st === 'fix') err = obCheckRows(st);
   else if (st === 'va') { if (!(obVal(OB.vaV) > 0)) err = 'Digite quanto você recebe de VA/VR por mês.'; }
   else if (st === 'card') { const d = parseInt(OB.closeDay), du = String(OB.dueDay || '').trim(); if (!(d >= 1 && d <= 28)) err = 'Digite um dia de 1 a 28, ou toque em “Não uso cartão de crédito”.'; else if (du && !(+du >= 1 && +du <= 31)) err = 'O vencimento precisa ser um dia de 1 a 31.'; else OB.card = true; }
-  else if (st === 'cx') { if (!OB.cxName.trim()) err = 'Dê um nome para a caixinha, ou toque em “Criar depois”.'; else if (isNaN(obVal(OB.cxGoal))) err = 'Valor da meta inválido.'; }
-  else if (st === 'hoje') { if ([OB.accBal, OB.fatOpen, OB.fatClosed, OB.cxHave].some(x => isNaN(obVal(x)))) err = 'Confira os valores digitados.'; }
+  else if (st === 'cx') {
+    OB.cx = OB.cx.filter(r => r.n.trim() || String(r.v).trim());
+    const seen = new Set();
+    for (const r of OB.cx) { const k = norm(r.n.trim()); if (!k) { err = 'Dê um nome para cada caixinha ou remova a linha.'; break; } if (seen.has(k)) { err = `Já existe uma caixinha “${r.n.trim()}”.`; break; } seen.add(k); if (isNaN(obVal(r.v))) { err = `Meta de “${r.n.trim()}” inválida.`; break; } }
+  }
+  else if (st === 'hoje') { if ([OB.accBal, OB.fatOpen, OB.fatClosed, OB.cxHave, ...OB.cx.map(r => r.h)].some(x => isNaN(obVal(x)))) err = 'Confira os valores digitados.'; }
   if (err) { OB.err = err; renderOnboard(); return; }
   if (st === 'hoje') { obApply(); obGo('done'); return; }
   obGo(obNextStep());
@@ -5618,12 +5640,10 @@ ACT.obva = el => { if (el.dataset.v === '1') { OB.va = true; OB.err = ''; render
 ACT.obvasep = el => { OB.vaSep = el.dataset.v; renderOnboard(); };
 ACT.obnova = () => { OB.va = false; OB.vaV = ''; obGo('card'); };
 ACT.obnocard = () => { OB.card = false; OB.closeDay = ''; obGo('fix'); };
-ACT.obnocx = () => { OB.cxName = ''; obGo('hoje'); };
-ACT.obnohoje = () => { OB.accBal = OB.fatOpen = OB.fatClosed = OB.cxHave = ''; obApply(); obGo('done'); };
+ACT.obnohoje = () => { OB.accBal = OB.fatOpen = OB.fatClosed = OB.cxHave = ''; OB.cx.forEach(r => { r.h = ''; }); obApply(); obGo('done'); };
 ACT.obacc = el => { OB.accName = OB.accName === el.dataset.n ? '' : el.dataset.n; renderOnboard(); };
-ACT.obadd = el => { const k = el.dataset.k, n = el.dataset.n || ''; OB[k].push({ n, v: '' }); OB.err = ''; const i = OB[k].length - 1; renderOnboard(`[data-ob="${k}.${i}.${n ? 'v' : 'n'}"]`); };
+ACT.obadd = el => { const k = el.dataset.k, n = el.dataset.n || ''; OB[k].push(k === 'cx' ? { n, v: '', h: '' } : { n, v: '' }); OB.err = ''; const i = OB[k].length - 1; renderOnboard(`[data-ob="${k}.${i}.${n ? 'v' : 'n'}"]`); };
 ACT.obdel = el => { OB[el.dataset.k].splice(+el.dataset.i, 1); OB.err = ''; renderOnboard(); };
-ACT.obcxname = el => { OB.cxName = el.dataset.n; OB.err = ''; renderOnboard(); };
 ACT.obcxpct = el => { OB.cxPct = el.dataset.v; renderOnboard(); };
 ACT.obend = () => obEnter();
 
