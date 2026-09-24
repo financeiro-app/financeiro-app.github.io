@@ -515,6 +515,9 @@ body.auth #app{padding:0;max-width:none}
 .obres>div+div{border-top:1px solid var(--line)}
 .obres>div:last-child b{font:400 24px/1 var(--serif)}
 .auth-card .hint{margin:0 0 14px}
+.cxbal{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card-2);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:0 0 16px}
+.cxbal span{display:block;color:var(--mut);font-size:12.5px}
+.cxbal b{font:400 26px/1.1 var(--serif);font-variant-numeric:tabular-nums}
 .obsec{border:1px solid var(--line);border-radius:16px;padding:14px 14px 2px;margin:0 0 12px}
 .obsec>b{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;margin-bottom:12px}
 .obsec>b svg{color:var(--acc)}
@@ -1923,7 +1926,7 @@ function txRow(t) {
   return `<button class="tx${isCard ? ' tx-card' : ''}"${isCard ? ` style="${cardVars(cardOf(t))}"` : ''} data-act="edtx" data-id="${t.id}">${cbadge(t.cat)}<span class="tm"><b>${esc(t.desc)}</b><small>${sub}</small></span><span class="tv"><b class="${isIn ? 'cr' : ''}">${isIn ? '+' : '−'}${brl(t.v).replace('−', '')}</b>${right}</span></button>`;
 }
 function apRow(a) {
-  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.ini ? ' · saldo inicial' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
+  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.ini ? ' · saldo inicial' : a.adj ? ' · ajuste de saldo' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
 }
 
 // ---------- INÍCIO ----------
@@ -2276,7 +2279,7 @@ function viewCxBody() {
   }).join('');
   const selic = `<section class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b style="font-weight:600">Selic</b><div class="mut sm">Base dos rendimentos (dias úteis, base 252)</div></div><label class="inl"><input class="in sm" inputmode="decimal" data-inv="selic" value="${String(S.selic).replace('.', ',')}" aria-label="Selic ao ano em porcentagem"><span>%</span></label></section>`;
   const aps = S.ap.slice().sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : parseInt(b.id.slice(1)) - parseInt(a.id.slice(1))).slice(0, UI.open.allap ? 999 : 6);
-  const apSec = S.ap.length ? sh('Aportes recentes', S.ap.length > 6 ? `<button class="link" data-act="tog" data-t="allap">${UI.open.allap ? 'Mostrar menos' : 'Ver todos'}</button>` : '') + `<div class="list">${aps.map(a => `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon(a.v < 0 ? 'out' : 'in', 18)}</span><span class="tm"><b>${esc(a.cx)}</b><small>${dmy(a.d)}/${a.d.slice(0, 4)}${a.ini ? ' · saldo inicial' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:${a.v < 0 ? 'var(--neg)' : 'var(--acc)'}">${brlS(a.v)}</b></span></button>`).join('')}</div>` : '';
+  const apSec = S.ap.length ? sh('Aportes recentes', S.ap.length > 6 ? `<button class="link" data-act="tog" data-t="allap">${UI.open.allap ? 'Mostrar menos' : 'Ver todos'}</button>` : '') + `<div class="list">${aps.map(a => `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon(a.v < 0 ? 'out' : 'in', 18)}</span><span class="tm"><b>${esc(a.cx)}</b><small>${dmy(a.d)}/${a.d.slice(0, 4)}${a.ini ? ' · saldo inicial' : a.adj ? ' · ajuste de saldo' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:${a.v < 0 ? 'var(--neg)' : 'var(--acc)'}">${brlS(a.v)}</b></span></button>`).join('')}</div>` : '';
   return monthNav() + summary + actions + sh('Suas caixinhas', `<button class="link" data-act="cxnew">Nova caixinha</button>`) + (S.cx.length ? list : `<section class="card">${empty('Nenhuma caixinha ainda', 'Crie a primeira — reserva de emergência, viagem, casa — e registre os aportes.', 'box')}<button class="btn primary" style="width:100%" data-act="cxnew">Criar caixinha</button></section>`) + selic + apSec;
 }
 function viewInvBody() {
@@ -4687,7 +4690,7 @@ function saveEntry(v, again) {
   let msg;
   commit(S => {
     if (v.id) { S.tx = S.tx.filter(t => t.id !== v.id); S.ap = S.ap.filter(a => a.id !== v.id); }
-    if (v.mode === 'ap') { S.ap.push({ id: v.id && v.id[0] === 'a' ? v.id : nid('a'), d: v.d, cx: v.cx, v: val, ...(v.re === '1' ? { re: true, ...(v.ini ? { ini: true } : {}) } : v.re === '2' ? { ext: true } : {}), ...(multi && v.re === '0' && !cxIsJuros(v.cx) ? { acc: accIdOf(v.acc) } : {}) }); msg = `${val < 0 ? 'Resgate' : 'Guardado'} ${brl(Math.abs(val))} em ${v.cx}`; }
+    if (v.mode === 'ap') { S.ap.push({ id: v.id && v.id[0] === 'a' ? v.id : nid('a'), d: v.d, cx: v.cx, v: val, ...(v.re === '1' ? { re: true, ...(v.ini ? { ini: true } : {}), ...(v.adj ? { adj: true } : {}) } : v.re === '2' ? { ext: true } : {}), ...(multi && v.re === '0' && !cxIsJuros(v.cx) ? { acc: accIdOf(v.acc) } : {}) }); msg = `${val < 0 ? 'Resgate' : 'Guardado'} ${brl(Math.abs(val))} em ${v.cx}`; }
     else if (v.mode === 'tr') {
       // transferência entre contas: não é entrada nem saída (o motor e os relatórios ignoram t:'tr')
       const tid = v.id && v.id[0] === 't' ? v.id : nid('t'), desc = String(v.desc || '').trim() || 'Transferência';
@@ -4813,7 +4816,7 @@ ACT.edtx = el => {
   if (t.t === 'tr') { openEntry({ id: t.id, mode: 'tr', v: String(t.v).replace('.', ','), from: t.from || '', to: t.to || '', desc: t.desc && t.desc !== 'Transferência' ? t.desc : '', d: t.d }); return; }
   openEntry({ id: t.id, mode: t.t, v: String(t.v).replace('.', ','), cat: t.cat, desc: t.desc, pay: t.pay === 'conta' && t.t === 'in' ? 'cartao' : t.pay, cardId: t.cardId || '', par: t.par || 1, d: t.d, st: t.st || 'ok', adv: (() => { const a = M.advOf(M.faturaYm(t), t.id); return a ? String(a).replace('.', ',') : ''; })(), gen: S.tx.some(x => x.recFor === t.id) ? '1' : '0', acc: t.acc || '', tags: txTags(t).slice() });
 };
-ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0', ini: !!a.ini }); };
+ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0', ini: !!a.ini, adj: !!a.adj }); };
 
 // ---------- valores fixos por mês ----------
 function monthEdit(fid, ym, back) {
@@ -4910,7 +4913,7 @@ function cxForm(c, opt = {}) {
   const isNew = !c; const id = c && c.id, g0 = goalOf(c);
   openForm({
     title: isNew ? (opt.goal ? 'Nova meta' : 'Nova caixinha') : c.name, v: { goalv: g0 ? String(g0.v).replace('.', ',') : '', goald: g0 && g0.d ? g0.d : '', name: c ? c.name : '', pct: c ? String(Math.round(c.pct * 1000) / 10).replace('.', ',') : '0', mode: c ? c.mode : 'none', mult: c ? String(Math.round(c.mult * 100)) : '100', start: c ? c.start : TODAY, note: c ? c.note : '' },
-    fields: v => [{ t: 'text', k: 'name', label: 'Nome' }, ...(isNew ? [{ t: 'html', html: `<div class="chips" style="margin:-6px 0 12px">${(opt.goal ? ['Viagem', 'Reserva de emergência', 'Carro', 'Casa', 'Casamento', 'Estudos'] : ['Reserva de emergência', 'Viagem', 'Casa', 'Carro', 'Estudos']).map(n => `<button type="button" class="chip sm" data-act="cxname" data-n="${n}">${n}</button>`).join('')}</div>` }] : []),
+    fields: v => [...(isNew ? [] : [{ t: 'html', html: cxBalHtml(c) }]), { t: 'text', k: 'name', label: 'Nome' }, ...(isNew ? [{ t: 'html', html: `<div class="chips" style="margin:-6px 0 12px">${(opt.goal ? ['Viagem', 'Reserva de emergência', 'Carro', 'Casa', 'Casamento', 'Estudos'] : ['Reserva de emergência', 'Viagem', 'Casa', 'Carro', 'Estudos']).map(n => `<button type="button" class="chip sm" data-act="cxname" data-n="${n}">${n}</button>`).join('')}</div>` }] : []),
       { t: 'money', k: 'goalv', label: opt.goal ? 'Quanto quer juntar' : 'Meta (opcional)', nofocus: !opt.goal }, { t: 'date', k: 'goald', label: 'Até quando (opcional)' }, { t: 'num', k: 'mult', label: 'Rendimento (% da Selic)', ph: '100' },
       { t: 'date', k: 'start', label: 'Data de início' },
       { t: 'seg', k: 'mode', label: 'Como recebe a sobra do mês', opts: [['none', 'Não recebe'], ['direct', '% direto'], ['balance', 'Equilibrar'], ...((typeof EXTRA_CX_MODES !== 'undefined') ? EXTRA_CX_MODES : (c && c.mode === 'juros' ? [['juros', 'Valor de item fixo']] : []))] },
@@ -4931,6 +4934,25 @@ function cxForm(c, opt = {}) {
   });
 }
 ACT.cxedit = el => cxForm(S.cx.find(x => x.id === el.dataset.id));
+// ----- acertar o saldo da caixinha pelo valor real (banco/corretora) -----
+const cxNow = c => { const r = M.cxRows(M.today).rows.find(x => x.c.id === c.id); return r ? Core.round2(r.atual) : 0; };
+const cxBalHtml = c => `<div class="cxbal"><div><span>Saldo hoje</span><b>${brl(cxNow(c))}</b></div><button type="button" class="chip sm" data-act="cxadj" data-id="${c.id}">${icon('edit', 14)} Acertar saldo</button></div>`;
+ACT.cxadj = el => {
+  const c = S.cx.find(x => x.id === el.dataset.id); if (!c) return;
+  const cur = cxNow(c);
+  openForm({
+    title: `Acertar saldo · ${c.name}`, back: () => cxForm(S.cx.find(x => x.id === c.id)), v: { v: '' },
+    fields: [{ t: 'money', k: 'v', label: 'Saldo agora' },
+      { t: 'note', html: `Pelo que está lançado, o app calcula ${brl(cur)}. Digite o valor que o banco ou a corretora mostra hoje: a diferença entra como ajuste, sem contar como guardado do mês nem mexer na sua conta.` }],
+    preview: v => { const n = Core.calc(v.v); if (!String(v.v).trim() || isNaN(n)) return ''; const d = Core.round2(n - cur); return Math.abs(d) < 0.005 ? '<p class="mut">Já está certo, nada muda.</p>' : `<div class="kv"><span>Ajuste</span><b class="${d < 0 ? 'neg' : 'pos'}">${d > 0 ? '+' : '−'}${brl(Math.abs(d))}</b></div>`; },
+    saveLabel: 'Acertar',
+    save: v => {
+      const n = Core.calc(v.v); if (!String(v.v).trim() || isNaN(n) || n < 0) return 'Digite o saldo que aparece hoje.';
+      const d = Core.round2(n - cur); if (Math.abs(d) < 0.005) return true;
+      commit(S => { S.ap.push({ id: nid('a'), d: TODAY, cx: c.name, v: d, re: true, adj: true }); }, `Saldo de ${c.name} acertado`); // como realocação: não é guardado do mês nem sai da conta
+    }
+  });
+};
 ACT.cxnew = () => cxForm(null);
 ACT.cxname = el => { if (FM && FM.v) { FM.v.name = el.dataset.n; drawSheet(); } };
 
