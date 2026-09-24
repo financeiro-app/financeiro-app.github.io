@@ -515,6 +515,13 @@ body.auth #app{padding:0;max-width:none}
 .obres>div+div{border-top:1px solid var(--line)}
 .obres>div:last-child b{font:400 24px/1 var(--serif)}
 .auth-card .hint{margin:0 0 14px}
+.obsec{border:1px solid var(--line);border-radius:16px;padding:14px 14px 2px;margin:0 0 12px}
+.obsec>b{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;margin-bottom:12px}
+.obsec>b svg{color:var(--acc)}
+.obsec .obchips{margin-bottom:12px}
+.obpair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.obpair .fl{min-height:2.6em;display:flex;align-items:flex-end}
+.obv.lg .in{text-align:left;font-variant-numeric:tabular-nums}
 /* primeiros passos (Início) */
 .gs{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid color-mix(in srgb,var(--line) 60%,transparent);padding:16px 16px 10px;margin:0 0 14px}
 .gs-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -1916,7 +1923,7 @@ function txRow(t) {
   return `<button class="tx${isCard ? ' tx-card' : ''}"${isCard ? ` style="${cardVars(cardOf(t))}"` : ''} data-act="edtx" data-id="${t.id}">${cbadge(t.cat)}<span class="tm"><b>${esc(t.desc)}</b><small>${sub}</small></span><span class="tv"><b class="${isIn ? 'cr' : ''}">${isIn ? '+' : '−'}${brl(t.v).replace('−', '')}</b>${right}</span></button>`;
 }
 function apRow(a) {
-  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
+  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.ini ? ' · saldo inicial' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
 }
 
 // ---------- INÍCIO ----------
@@ -1998,9 +2005,9 @@ function gsItems() {
   return [
     ['in', 'Cadastre suas entradas', S.fixed.some(f => f.kind === 'in'), 'data-act="openfix"'],
     ['repeat', 'Cadastre seus custos fixos', S.fixed.some(f => f.kind === 'out'), 'data-act="openfix"'],
-    ['out', 'Lance seu primeiro gasto', S.tx.some(t => t.t === 'out'), 'data-act="add" data-m="out"'],
+    ['out', 'Lance seu primeiro gasto', S.tx.some(t => t.t === 'out' && !t.ini), 'data-act="add" data-m="out"'],
     ['box', 'Crie sua primeira caixinha', S.cx.length > 0, 'data-act="cxnew"'],
-    ['save', 'Guarde dinheiro na caixinha', S.ap.length > 0, 'data-act="add" data-m="ap"']
+    ['save', 'Guarde dinheiro na caixinha', S.ap.some(a => !a.ini), 'data-act="add" data-m="ap"']
   ];
 }
 function gsCard() {
@@ -2269,7 +2276,7 @@ function viewCxBody() {
   }).join('');
   const selic = `<section class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b style="font-weight:600">Selic</b><div class="mut sm">Base dos rendimentos (dias úteis, base 252)</div></div><label class="inl"><input class="in sm" inputmode="decimal" data-inv="selic" value="${String(S.selic).replace('.', ',')}" aria-label="Selic ao ano em porcentagem"><span>%</span></label></section>`;
   const aps = S.ap.slice().sort((a, b) => a.d < b.d ? 1 : a.d > b.d ? -1 : parseInt(b.id.slice(1)) - parseInt(a.id.slice(1))).slice(0, UI.open.allap ? 999 : 6);
-  const apSec = S.ap.length ? sh('Aportes recentes', S.ap.length > 6 ? `<button class="link" data-act="tog" data-t="allap">${UI.open.allap ? 'Mostrar menos' : 'Ver todos'}</button>` : '') + `<div class="list">${aps.map(a => `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon(a.v < 0 ? 'out' : 'in', 18)}</span><span class="tm"><b>${esc(a.cx)}</b><small>${dmy(a.d)}/${a.d.slice(0, 4)}${a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:${a.v < 0 ? 'var(--neg)' : 'var(--acc)'}">${brlS(a.v)}</b></span></button>`).join('')}</div>` : '';
+  const apSec = S.ap.length ? sh('Aportes recentes', S.ap.length > 6 ? `<button class="link" data-act="tog" data-t="allap">${UI.open.allap ? 'Mostrar menos' : 'Ver todos'}</button>` : '') + `<div class="list">${aps.map(a => `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon(a.v < 0 ? 'out' : 'in', 18)}</span><span class="tm"><b>${esc(a.cx)}</b><small>${dmy(a.d)}/${a.d.slice(0, 4)}${a.ini ? ' · saldo inicial' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:${a.v < 0 ? 'var(--neg)' : 'var(--acc)'}">${brlS(a.v)}</b></span></button>`).join('')}</div>` : '';
   return monthNav() + summary + actions + sh('Suas caixinhas', `<button class="link" data-act="cxnew">Nova caixinha</button>`) + (S.cx.length ? list : `<section class="card">${empty('Nenhuma caixinha ainda', 'Crie a primeira — reserva de emergência, viagem, casa — e registre os aportes.', 'box')}<button class="btn primary" style="width:100%" data-act="cxnew">Criar caixinha</button></section>`) + selic + apSec;
 }
 function viewInvBody() {
@@ -4680,7 +4687,7 @@ function saveEntry(v, again) {
   let msg;
   commit(S => {
     if (v.id) { S.tx = S.tx.filter(t => t.id !== v.id); S.ap = S.ap.filter(a => a.id !== v.id); }
-    if (v.mode === 'ap') { S.ap.push({ id: v.id && v.id[0] === 'a' ? v.id : nid('a'), d: v.d, cx: v.cx, v: val, ...(v.re === '1' ? { re: true } : v.re === '2' ? { ext: true } : {}), ...(multi && v.re === '0' && !cxIsJuros(v.cx) ? { acc: accIdOf(v.acc) } : {}) }); msg = `${val < 0 ? 'Resgate' : 'Guardado'} ${brl(Math.abs(val))} em ${v.cx}`; }
+    if (v.mode === 'ap') { S.ap.push({ id: v.id && v.id[0] === 'a' ? v.id : nid('a'), d: v.d, cx: v.cx, v: val, ...(v.re === '1' ? { re: true, ...(v.ini ? { ini: true } : {}) } : v.re === '2' ? { ext: true } : {}), ...(multi && v.re === '0' && !cxIsJuros(v.cx) ? { acc: accIdOf(v.acc) } : {}) }); msg = `${val < 0 ? 'Resgate' : 'Guardado'} ${brl(Math.abs(val))} em ${v.cx}`; }
     else if (v.mode === 'tr') {
       // transferência entre contas: não é entrada nem saída (o motor e os relatórios ignoram t:'tr')
       const tid = v.id && v.id[0] === 't' ? v.id : nid('t'), desc = String(v.desc || '').trim() || 'Transferência';
@@ -4806,7 +4813,7 @@ ACT.edtx = el => {
   if (t.t === 'tr') { openEntry({ id: t.id, mode: 'tr', v: String(t.v).replace('.', ','), from: t.from || '', to: t.to || '', desc: t.desc && t.desc !== 'Transferência' ? t.desc : '', d: t.d }); return; }
   openEntry({ id: t.id, mode: t.t, v: String(t.v).replace('.', ','), cat: t.cat, desc: t.desc, pay: t.pay === 'conta' && t.t === 'in' ? 'cartao' : t.pay, cardId: t.cardId || '', par: t.par || 1, d: t.d, st: t.st || 'ok', adv: (() => { const a = M.advOf(M.faturaYm(t), t.id); return a ? String(a).replace('.', ',') : ''; })(), gen: S.tx.some(x => x.recFor === t.id) ? '1' : '0', acc: t.acc || '', tags: txTags(t).slice() });
 };
-ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0' }); };
+ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0', ini: !!a.ini }); };
 
 // ---------- valores fixos por mês ----------
 function monthEdit(fid, ym, back) {
@@ -5396,7 +5403,8 @@ async function startApp(user) {
 // S.obPend marca a conta que ainda não passou pelo passo a passo: se a pessoa fechar no meio, recomeça no próximo acesso.
 // Nada é gravado até o fim (obApply), então voltar e refazer um passo nunca duplica itens.
 let OB = null;
-const OB_STEPS = ['sal', 'inc', 'va', 'card', 'fix', 'cx'];
+const OB_STEPS = ['sal', 'inc', 'va', 'card', 'fix', 'cx', 'hoje'];
+const OB_BANKS = ['Nubank', 'Itaú', 'Inter', 'Bradesco', 'Caixa', 'Santander', 'Banco do Brasil'];
 const OB_INC = ['Freela', 'Aluguel recebido', 'Pensão', 'Bolsa', 'Renda extra'];
 const OB_FIX = ['Aluguel', 'Condomínio', 'Luz', 'Água', 'Internet', 'Celular', 'Plano de saúde', 'Academia', 'Streaming', 'Escola', 'Financiamento'];
 const OB_CX = ['Reserva de emergência', 'Viagem', 'Casa própria', 'Carro', 'Estudos'];
@@ -5408,7 +5416,7 @@ const OB_TIPS = [
 ];
 const obTipsHtml = () => `<div class="obtips">${OB_TIPS.map(([ic, t, s]) => `<div class="obtip"><span class="ci">${icon(ic, 19)}</span><span><b>${t}</b><small>${s}</small></span></div>`).join('')}</div>`;
 function startOnboard() {
-  OB = { step: 'hi', name: (S.profile && S.profile.name) || userName(), sal: '', inc: [], va: null, vaV: '', vaSep: '1', card: null, cardName: '', closeDay: '', fix: [], cxName: '', cxGoal: '', cxPct: '50', err: '' };
+  OB = { step: 'hi', name: (S.profile && S.profile.name) || userName(), sal: '', inc: [], va: null, vaV: '', vaSep: '1', card: null, cardName: '', closeDay: '', fix: [], cxName: '', cxGoal: '', cxPct: '50', dueDay: '', accName: '', accBal: '', fatOpen: '', fatClosed: '', cxHave: '', err: '' };
   renderOnboard();
 }
 const obVal = s => { const n = Core.calc(String(s || '').trim() || '0'); return isNaN(n) ? NaN : n; };
@@ -5430,9 +5438,28 @@ function obApply() {
     if (o.vaSep === '1') { S.vaSep = true; S.env = [{ id: 'e_vavr', name: 'VA/VR', monthly: Core.round2(va), cats: ['*'], est: false, grp: 'A' }]; } else { S.vaSep = false; S.env = []; }
   } else if (o.va === false) { S.vaSep = false; S.env = []; }
   const d = parseInt(o.closeDay);
-  if (o.card === true && d >= 1 && d <= 28) { S.closeDay = d; if (S.cards && S.cards[0]) { S.cards[0].closeDay = d; if (o.cardName.trim()) S.cards[0].name = o.cardName.trim(); } }
+  if (o.card === true && d >= 1 && d <= 28) { S.closeDay = d; if (S.cards && S.cards[0]) { S.cards[0].closeDay = d; if (o.cardName.trim()) S.cards[0].name = o.cardName.trim(); const du = parseInt(o.dueDay); if (du >= 1 && du <= 31) S.cards[0].dueDay = du; } }
   o.fix.forEach(r => { const v = obVal(r.v); if (r.n.trim() && v > 0) add(null, r.n.trim(), 'out', v); });
   if (o.cxName.trim()) { const g = obVal(o.cxGoal); S.cx.push({ id: nid('c'), name: o.cxName.trim(), mode: +o.cxPct > 0 ? 'direct' : 'none', mult: 1, pct: (+o.cxPct || 0) / 100, start: TODAY, note: '', goal: g > 0 ? { v: Core.round2(g), d: '' } : null }); }
+  // ---- onde a pessoa está hoje: nada disso conta como gasto ou guardado do mês, só deixa os saldos em dia ----
+  const have = obVal(o.cxHave);
+  if (have > 0) {
+    let c = o.cxName.trim() ? S.cx.find(x => x.name === o.cxName.trim()) : null;
+    if (!c) { c = { id: nid('c'), name: 'Reserva', mode: 'none', mult: 1, pct: 0, start: TODAY, note: '', goal: null }; S.cx.push(c); }
+    S.ap.push({ id: nid('a'), d: TODAY, cx: c.name, v: Core.round2(have), re: true, ini: true }); // como realocação: aumenta a caixinha sem contar como guardado do mês
+  }
+  const card = S.cards && S.cards[0];
+  if (o.card === true && card) {
+    const fo = obVal(o.fatOpen), fc = obVal(o.fatClosed), openYm = +TODAY.slice(8, 10) < (card.closeDay || 1) ? CUR_YM : Core.addM(CUR_YM, 1);
+    const tx = (d, v, desc) => S.tx.push({ id: nid('t'), d, t: 'out', v: Core.round2(v), cat: 'Outros', desc, pay: 'cartao', cardId: card.id, par: 1, ini: true });
+    if (fo > 0) tx(TODAY, fo, 'Fatura aberta (valor inicial)'); // hoje cai sempre na fatura aberta
+    if (fc > 0) tx(Core.lastDay(Core.addM(openYm, -2)), fc, 'Fatura fechada (valor inicial)'); // último dia do mês anterior ao da fatura fechada cai dentro dela
+  }
+  const bal = String(o.accBal || '').trim() ? obVal(o.accBal) : NaN;
+  if (!isNaN(bal) && !accList().length) { // conta criada por último: o saldo de hoje já inclui o que foi lançado acima
+    S.accounts = [{ id: nid('acc'), name: o.accName.trim() || 'Conta principal', color: ACC_TONES[0], init: Core.round2(bal), since: TODAY }];
+    S.accounts[0].sinceUid = S.uid;
+  }
   S.gs = TODAY; // mostra "Primeiros passos" na Início
   delete S.obPend;
   save();
@@ -5455,7 +5482,8 @@ const OB_SIDE = {
   va: ['Vale tem lugar próprio.', 'Se você recebe VA/VR, o app acompanha o saldo dele sem misturar com o salário.'],
   card: ['O cartão tem outro ritmo.', 'Compra no crédito só pesa quando a fatura vence. Por isso o app precisa saber quando ela fecha.'],
   fix: ['Agora, o que sai todo mês.', 'Custos fixos se repetem sozinhos. Assim você sabe desde o dia 1 quanto vai sobrar.'],
-  cx: ['Guarde com propósito.', 'Caixinha é um cofrinho com objetivo: recebe parte da sobra do mês e mostra quanto rende.']
+  cx: ['Guarde com propósito.', 'Caixinha é um cofrinho com objetivo: recebe parte da sobra do mês e mostra quanto rende.'],
+  hoje: ['Comece com tudo em dia.', 'Saldo, fatura e o que já está guardado: o app parte desses números, não do zero.']
 };
 function obShell(title, sub, body) {
   const at = OB_STEPS.indexOf(OB.step), side = OB_SIDE[OB.step];
@@ -5490,6 +5518,7 @@ function renderOnboard(focus) {
     obShell('Você usa cartão de crédito?', 'Compras feitas a partir do dia do fechamento entram na fatura do mês seguinte.', `
       <div class="fld"><label class="fl" for="obCard">Nome do cartão (opcional)</label><input class="in" id="obCard" data-ob="cardName" value="${esc(OB.cardName)}" placeholder="Ex.: Nubank" autocomplete="off"></div>
       <div class="fld"><label class="fl" for="obClose">Dia em que a fatura fecha (1 a 28)</label><input class="in" id="obClose" data-ob="closeDay" type="number" min="1" max="28" inputmode="numeric" placeholder="Ex.: 5" value="${esc(OB.closeDay)}"></div>
+      <div class="fld"><label class="fl" for="obDue">Dia do vencimento (opcional)</label><input class="in" id="obDue" data-ob="dueDay" type="number" min="1" max="31" inputmode="numeric" placeholder="Ex.: 12" value="${esc(OB.dueDay)}"></div>
       <p class="hint">Tem mais de um cartão? Depois você adiciona os outros na aba Cartões.</p>` + obBtns('obnext', 'Continuar', 'obnocard', 'Não uso cartão de crédito'));
   } else if (st === 'fix') {
     const t = obTotals();
@@ -5504,11 +5533,25 @@ function renderOnboard(focus) {
       <div class="fld"><label class="fl">Meta (opcional)</label>${obMoney('cxGoal')}</div>
       <div class="fld"><label class="fl">Quanto da sobra vai para ela todo mês?</label><div class="seg">${[['25', '25%'], ['50', '50%'], ['100', 'Tudo'], ['0', 'Manual']].map(([v, l]) => `<button type="button" class="${OB.cxPct === v ? 'on' : ''}" data-act="obcxpct" data-v="${v}">${l}</button>`).join('')}</div></div>
       <p class="hint">${p > 0 && t.sobra > 0 ? `Com a sobra de ${brl(t.sobra)}, cerca de <b>${brl(t.sobra * p / 100)}</b> por mês iriam para ela. ` : ''}No fim do mês, o botão “Distribuir” da Início registra isso para você.</p>` + obBtns('obnext', 'Criar caixinha', 'obnocx', 'Criar depois'));
+  } else if (st === 'hoje') {
+    const cxN = OB.cxName.trim();
+    obShell('Onde você está hoje?', 'Informe os valores de agora e o app parte deles, sem você lançar o passado. Tudo é opcional.', `
+      <div class="obsec"><b>${icon('bank', 16)} Conta do banco</b>
+      <div class="fld"><label class="fl" for="obBal">Saldo que o banco mostra hoje</label><div class="obv lg"><span>R$</span><input class="in" id="obBal" data-ob="accBal" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.accBal)}"></div></div>
+      <div class="fld"><label class="fl" for="obAcc">Qual banco? (opcional)</label><input class="in" id="obAcc" data-ob="accName" value="${esc(OB.accName)}" placeholder="Ex.: Nubank" autocomplete="off"></div>
+      <div class="chips obchips" style="margin-top:-6px">${OB_BANKS.map(n => `<button type="button" class="chip sm ${OB.accName === n ? 'on' : ''}" data-act="obacc" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>
+      ${OB.card === true ? `<div class="obsec"><b>${icon('card', 16)} ${esc(OB.cardName.trim() || 'Cartão')}</b>
+      <div class="obpair"><div class="fld"><label class="fl" for="obFo">Fatura aberta até agora</label><div class="obv lg"><span>R$</span><input class="in" id="obFo" data-ob="fatOpen" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.fatOpen)}"></div></div>
+      <div class="fld"><label class="fl" for="obFc">Fatura fechada a pagar</label><div class="obv lg"><span>R$</span><input class="in" id="obFc" data-ob="fatClosed" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.fatClosed)}"></div></div></div>
+      <p class="hint">Veja no app do cartão. Se a fatura fechada já foi paga, deixe em branco. Daqui pra frente é só lançar as compras novas.</p></div>` : ''}
+      <div class="obsec"><b>${icon('box', 16)} ${cxN ? esc(cxN) : 'Dinheiro guardado'}</b>
+      <div class="fld"><label class="fl" for="obHave">${cxN ? 'Quanto você já tem guardado nela' : 'Já tem algo guardado? Vira a caixinha “Reserva”'}</label><div class="obv lg"><span>R$</span><input class="in" id="obHave" data-ob="cxHave" inputmode="numeric" data-money="1" autocomplete="off" placeholder="0,00" value="${esc(OB.cxHave)}"></div></div>
+      <p class="hint">Entra como saldo inicial: não conta como guardado deste mês nem sai da sua conta.</p></div>` + obBtns('obnext', 'Concluir', 'obnohoje', 'Pular, começo do zero'));
   } else if (st === 'done') {
     const t = obTotals(), nm = String(OB.name || '').trim().split(/\s+/)[0];
     authShell(`Tudo pronto${nm ? ', ' + esc(nm) : ''}!`, 'Seu mês já está montado. Agora é só lançar o dia a dia.', `
       <h3>Seu mês, por enquanto</h3>
-      ${t.inc > 0 || t.fix > 0 ? `<div class="obres"><div><span>Entradas fixas</span><b class="pos">${brl(t.inc)}</b></div><div><span>Custos fixos</span><b>${brl(t.fix)}</b></div>${OB.va === true && OB.vaSep === '1' && obVal(OB.vaV) > 0 ? `<div><span>VA/VR, à parte</span><b>${brl(obVal(OB.vaV))}</b></div>` : ''}<div><span>Sobra prevista</span><b class="${t.sobra < 0 ? 'neg' : ''}">${brl(t.sobra)}</b></div></div>` : '<p class="sub">Quando cadastrar entradas e custos fixos, a Início mostra a sobra prevista do mês.</p>'}
+      ${t.inc > 0 || t.fix > 0 ? `<div class="obres"><div><span>Entradas fixas</span><b class="pos">${brl(t.inc)}</b></div><div><span>Custos fixos</span><b>${brl(t.fix)}</b></div>${OB.va === true && OB.vaSep === '1' && obVal(OB.vaV) > 0 ? `<div><span>VA/VR, à parte</span><b>${brl(obVal(OB.vaV))}</b></div>` : ''}${String(OB.accBal).trim() && !isNaN(obVal(OB.accBal)) ? `<div><span>Saldo em conta hoje</span><b>${brl(obVal(OB.accBal))}</b></div>` : ''}<div><span>Sobra prevista</span><b class="${t.sobra < 0 ? 'neg' : ''}">${brl(t.sobra)}</b></div></div>` : '<p class="sub">Quando cadastrar entradas e custos fixos, a Início mostra a sobra prevista do mês.</p>'}
       <p class="fl" style="margin:18px 0 8px">Como usar o app</p>${obTipsHtml()}
       ${obBtns('obend', 'Ir para o app')}`);
   }
@@ -5541,10 +5584,11 @@ ACT.obnext = () => {
   if (st === 'sal') { const v = obVal(OB.sal); if (!(v > 0)) err = 'Digite o valor do salário, ou toque em “Não tenho salário fixo”.'; }
   else if (st === 'inc' || st === 'fix') err = obCheckRows(st);
   else if (st === 'va') { if (!(obVal(OB.vaV) > 0)) err = 'Digite quanto você recebe de VA/VR por mês.'; }
-  else if (st === 'card') { const d = parseInt(OB.closeDay); if (!(d >= 1 && d <= 28)) err = 'Digite um dia de 1 a 28, ou toque em “Não uso cartão de crédito”.'; else OB.card = true; }
+  else if (st === 'card') { const d = parseInt(OB.closeDay), du = String(OB.dueDay || '').trim(); if (!(d >= 1 && d <= 28)) err = 'Digite um dia de 1 a 28, ou toque em “Não uso cartão de crédito”.'; else if (du && !(+du >= 1 && +du <= 31)) err = 'O vencimento precisa ser um dia de 1 a 31.'; else OB.card = true; }
   else if (st === 'cx') { if (!OB.cxName.trim()) err = 'Dê um nome para a caixinha, ou toque em “Criar depois”.'; else if (isNaN(obVal(OB.cxGoal))) err = 'Valor da meta inválido.'; }
+  else if (st === 'hoje') { if ([OB.accBal, OB.fatOpen, OB.fatClosed, OB.cxHave].some(x => isNaN(obVal(x)))) err = 'Confira os valores digitados.'; }
   if (err) { OB.err = err; renderOnboard(); return; }
-  if (st === 'cx') { obApply(); obGo('done'); return; }
+  if (st === 'hoje') { obApply(); obGo('done'); return; }
   obGo(obNextStep());
 };
 ACT.obnosal = () => { OB.sal = ''; obGo('inc'); };
@@ -5552,7 +5596,9 @@ ACT.obva = el => { if (el.dataset.v === '1') { OB.va = true; OB.err = ''; render
 ACT.obvasep = el => { OB.vaSep = el.dataset.v; renderOnboard(); };
 ACT.obnova = () => { OB.va = false; OB.vaV = ''; obGo('card'); };
 ACT.obnocard = () => { OB.card = false; OB.closeDay = ''; obGo('fix'); };
-ACT.obnocx = () => { OB.cxName = ''; obApply(); obGo('done'); };
+ACT.obnocx = () => { OB.cxName = ''; obGo('hoje'); };
+ACT.obnohoje = () => { OB.accBal = OB.fatOpen = OB.fatClosed = OB.cxHave = ''; obApply(); obGo('done'); };
+ACT.obacc = el => { OB.accName = OB.accName === el.dataset.n ? '' : el.dataset.n; renderOnboard(); };
 ACT.obadd = el => { const k = el.dataset.k, n = el.dataset.n || ''; OB[k].push({ n, v: '' }); OB.err = ''; const i = OB[k].length - 1; renderOnboard(`[data-ob="${k}.${i}.${n ? 'v' : 'n'}"]`); };
 ACT.obdel = el => { OB[el.dataset.k].splice(+el.dataset.i, 1); OB.err = ''; renderOnboard(); };
 ACT.obcxname = el => { OB.cxName = el.dataset.n; OB.err = ''; renderOnboard(); };
