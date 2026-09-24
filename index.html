@@ -490,6 +490,48 @@ body.auth #app{padding:0;max-width:none}
 .choice b{display:block;font-weight:600}
 .choice small{color:var(--mut);font-size:12.5px}
 .logo{width:34px;height:34px;flex:none}
+.auth.ob .auth-side h1{max-width:18ch}
+.obtop{display:flex;align-items:center;gap:10px;margin:-6px 0 16px}
+.obtop .ib{margin-left:-8px;flex:none}
+.obtop .obdots{flex:1;margin:0}
+.obn{font-size:12px;color:var(--mut);font-weight:600;flex:none}
+.obtips,.obplan{display:flex;flex-direction:column;gap:10px;margin:4px 0 18px}
+.obtip{display:grid;grid-template-columns:38px 1fr;gap:12px;align-items:center}
+.obtip .ci{width:38px;height:38px;border-radius:12px;background:var(--card-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--acc)}
+.obtip b{display:block;font-weight:600;font-size:14.5px}
+.obtip small{display:block;color:var(--mut);font-size:12.5px;line-height:1.45}
+.obchips{margin:0 0 14px}
+.obchips .chip svg{margin-right:4px;opacity:.7}
+.obrow{display:grid;grid-template-columns:minmax(0,1fr) 128px 34px;gap:8px;align-items:center;margin-bottom:8px;animation:rise .3s var(--ease) both}
+.obrow .ib{width:34px;height:34px}
+.obv{position:relative}
+.obv span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:13px;pointer-events:none}
+.obv .in{padding-left:34px;text-align:right}
+.obsum,.obres>div{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.obsum{border-top:1px solid var(--line);padding:12px 2px 0;margin:6px 0 4px;font-size:14px}
+.obsum b,.obres b{font-weight:600;font-variant-numeric:tabular-nums}
+.obres{background:var(--card-2);border:1px solid var(--line);border-radius:16px;padding:6px 14px;margin:6px 0 0}
+.obres>div{padding:9px 0;font-size:14px}
+.obres>div+div{border-top:1px solid var(--line)}
+.obres>div:last-child b{font:400 24px/1 var(--serif)}
+.auth-card .hint{margin:0 0 14px}
+/* primeiros passos (Início) */
+.gs{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid color-mix(in srgb,var(--line) 60%,transparent);padding:16px 16px 10px;margin:0 0 14px}
+.gs-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gs-h b{display:block;font:400 22px/1.1 var(--serif)}
+.gs-h small{color:var(--mut);font-size:12.5px}
+.gs-bar{height:5px;border-radius:99px;background:var(--line);margin:12px 0 6px;overflow:hidden}
+.gs-bar i{display:block;height:100%;border-radius:inherit;background:var(--acc);transition:width .5s var(--ease)}
+.gs-i{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 0;font-size:14px;background:none;border:0;color:var(--ink);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.gs-i:last-of-type{border-bottom:0}
+.gs-i>svg{color:var(--mut)}
+.gs-c{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--card-2);color:var(--acc);border:1px solid var(--line)}
+.gs-i.next{font-weight:600}
+.gs-i.next .gs-c{background:var(--acc);color:#fff;border-color:var(--acc)}
+.gs-i.ok{color:var(--mut);grid-template-columns:28px 1fr}
+.gs-i.ok span:last-child{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--mut) 50%,transparent)}
+.gs-i.ok .gs-c{background:var(--pos-soft,var(--card-2));color:var(--pos);border-color:transparent}
+.gs-how{display:block;margin:8px 0 2px;font-size:13px}
 
 /* carregando */
 .skel{display:flex;flex-direction:column;gap:12px;padding-top:20px}
@@ -1947,9 +1989,31 @@ function viewHome() {
   const patSec = sh('Patrimônio', `<button class="link" data-act="go" data-tab="pat">Detalhes</button>`) + `<button class="card" style="width:100%;text-align:left;display:block" data-act="go" data-tab="pat"><div class="mut sm">Caixinhas e investimentos</div><div style="font:400 34px/1.1 var(--serif);margin:4px 0 10px" data-count="${d.total}" data-key="pathome">${brl(d.total)}</div><div class="stackbar" style="margin:0 0 8px">${d.total > 0.004 ? `<i style="width:${(d.cx.tot / d.total * 100).toFixed(2)}%;background:var(--teal)"></i><i style="width:${(d.invT / d.total * 100).toFixed(2)}%;background:var(--tan)"></i>` : ''}</div><div class="mut sm" style="display:flex;justify-content:space-between"><span>Caixinhas ${brl(d.cx.tot)}</span><span>Investimentos ${brl(d.invT)}</span></div></button>`;
 
   const nm = userName();
-  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + qa + (ym === CUR_YM ? insightCard() : '') +
+  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + qa + gsCard() + (ym === CUR_YM ? insightCard() : '') +
     `<div class="home-grid"><div class="col">${catSec}${recentSec}</div><div class="col">${typeof accountsHomeHtml === 'function' ? accountsHomeHtml() : ''}${cardsSec}${vaSec}${recSec}${patSec}</div></div>`;
 }
+
+// ---------- primeiros passos (Início, só em conta nova até concluir ou ocultar) ----------
+function gsItems() {
+  return [
+    ['in', 'Cadastre suas entradas', S.fixed.some(f => f.kind === 'in'), 'data-act="openfix"'],
+    ['repeat', 'Cadastre seus custos fixos', S.fixed.some(f => f.kind === 'out'), 'data-act="openfix"'],
+    ['out', 'Lance seu primeiro gasto', S.tx.some(t => t.t === 'out'), 'data-act="add" data-m="out"'],
+    ['box', 'Crie sua primeira caixinha', S.cx.length > 0, 'data-act="cxnew"'],
+    ['save', 'Guarde dinheiro na caixinha', S.ap.length > 0, 'data-act="add" data-m="ap"']
+  ];
+}
+function gsCard() {
+  if (!S.gs || S.gsOff) return '';
+  const it = gsItems(), n = it.filter(x => x[2]).length; if (n === it.length) return '';
+  const next = it.findIndex(x => !x[2]);
+  return `<section class="gs"><div class="gs-h"><div><b>Primeiros passos</b><small>${n} de ${it.length} feitos</small></div><button class="link" data-act="gsoff">Ocultar</button></div>` +
+    `<div class="gs-bar"><i style="width:${(n / it.length * 100).toFixed(1)}%"></i></div>` +
+    it.map(([ic, t, ok, at], i) => ok ? `<div class="gs-i ok"><span class="gs-c">${icon('check', 14)}</span><span>${t}</span></div>` : `<button class="gs-i${i === next ? ' next' : ''}" ${at}><span class="gs-c">${icon(ic, 15)}</span><span>${t}</span>${icon('right', 16)}</button>`).join('') +
+    `<button class="link gs-how" data-act="howto">Como usar o app</button></section>`;
+}
+ACT.gsoff = () => commit(S => { S.gsOff = 1; }, 'Ocultado. O guia continua em Ajustes → Como usar o app');
+ACT.howto = () => openInfo('Como usar o app', `<p class="mut" style="margin-bottom:14px">O básico para o seu mês fechar sem surpresa.</p>${obTipsHtml()}<div class="sheet-foot"><button class="btn primary" data-act="fclose">Entendi</button></div>`);
 
 // ---------- EXTRATO ----------
 // cartão no tamanho da Home: fatura fechada + fatura aberta
@@ -4316,7 +4380,8 @@ function viewMore() {
       set('search', 'Categorização automática', nr ? `${nr} regra${nr > 1 ? 's' : ''} aprendida${nr > 1 ? 's' : ''} ou criada${nr > 1 ? 's' : ''}` : 'Preenche a categoria sozinho pela descrição', 'autocatlist')) +
     group('Ferramentas',
       set('plan', 'Planejamento', 'Orçamento, contas a pagar, metas e dívidas', 'openplan') +
-      set('chart', 'Relatórios', 'Padrões e personalizados, em CSV ou PDF', 'openrel')) +
+      set('chart', 'Relatórios', 'Padrões e personalizados, em CSV ou PDF', 'openrel') +
+      set('sparkle', 'Como usar o app', 'Um guia rápido do básico', 'howto')) +
     group('Dados',
       set('upload', 'Importar extrato', 'Arquivo OFX ou CSV exportado do banco', 'impstart') +
       set('save', 'Backup', 'Exportar ou importar todos os seus dados', 'dados')) +
@@ -5313,41 +5378,66 @@ async function startApp(user) {
     renderOffline(); return;
   }
   OFFLINE = false;
-  let isNewAccount = false;
   if (dirty && cached && !(remote && remote.updated_at && Date.parse(remote.updated_at) > +dirty)) {
     S = cached; cloudSave(); // alterações feitas sem internet que ainda não tinham subido
   } else if (remote && typeof remote.blob === 'string') {
     try { S = migrate(JSON.parse(remote.blob)); } catch (e) { S = migrate(SEED()); }
   } else {
     S = migrate(SEED());
-    isNewAccount = true;
+    S.startYm = CUR_YM; S.obPend = 1; // conta nova: começa no mês atual e passa pelo passo a passo
     try { await sb.from('app_state').insert({ user_id: user.id, blob: JSON.stringify(S) }); } catch (e) { }
   }
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { }
   try { applyTheme(localStorage.getItem(THEME_KEY) || 'light'); } catch (e) { }
-  if (isNewAccount) startOnboard(); else { render(); applyUrlShortcut(); }
+  if (S.obPend) startOnboard(); else { render(); applyUrlShortcut(); }
 }
 
-// ---------- boas-vindas: 2-3 perguntas rápidas pra conta nova (antes do 1º render do app) ----------
-let OB = null; // { step, closeDay, sal, err }
+// ---------- boas-vindas: passo a passo da conta nova (antes do 1º render do app) ----------
+// S.obPend marca a conta que ainda não passou pelo passo a passo: se a pessoa fechar no meio, recomeça no próximo acesso.
+// Nada é gravado até o fim (obApply), então voltar e refazer um passo nunca duplica itens.
+let OB = null;
+const OB_STEPS = ['sal', 'inc', 'va', 'card', 'fix', 'cx'];
+const OB_INC = ['Freela', 'Aluguel recebido', 'Pensão', 'Bolsa', 'Renda extra'];
+const OB_FIX = ['Aluguel', 'Condomínio', 'Luz', 'Água', 'Internet', 'Celular', 'Plano de saúde', 'Academia', 'Streaming', 'Escola', 'Financiamento'];
+const OB_CX = ['Reserva de emergência', 'Viagem', 'Casa própria', 'Carro', 'Estudos'];
+const OB_TIPS = [
+  ['plus', 'Lance o dia a dia', 'Toque no + para registrar um gasto ou uma entrada. Dá para escrever ou falar, tipo “mercado 50”.'],
+  ['home', 'Acompanhe o mês', 'A Início mostra quanto sobra no mês e para onde está indo o dinheiro.'],
+  ['card', 'Cartão sem susto', 'Compras no crédito, parceladas ou não, caem sozinhas na fatura certa.'],
+  ['box', 'Guarde a sobra', 'No fim do mês, “Distribuir” manda o que sobrou para as caixinhas, e elas rendem.']
+];
+const obTipsHtml = () => `<div class="obtips">${OB_TIPS.map(([ic, t, s]) => `<div class="obtip"><span class="ci">${icon(ic, 19)}</span><span><b>${t}</b><small>${s}</small></span></div>`).join('')}</div>`;
 function startOnboard() {
-  OB = { step: 1, closeDay: '', sal: '', err: '' };
+  OB = { step: 'hi', name: (S.profile && S.profile.name) || userName(), sal: '', inc: [], va: null, vaV: '', vaSep: '1', card: null, cardName: '', closeDay: '', fix: [], cxName: '', cxGoal: '', cxPct: '50', err: '' };
   renderOnboard();
 }
-function finishOnboard() {
-  const d = parseInt(OB.closeDay);
-  if (d >= 1 && d <= 28) { S.closeDay = d; if (S.cards && S.cards[0]) S.cards[0].closeDay = d; }
-  const sal = Core.calc(OB.sal || '');
-  if (sal > 0) {
-    let s = S.fixed.find(f => f.id === 'f_sal');
-    if (!s) { s = { id: 'f_sal', name: 'Salário', kind: 'in', sched: [] }; S.fixed.push(s); }
-    s.sched.push([CUR_YM, Core.round2(sal)]);
-  }
-  OB = null;
-  document.body.classList.remove('auth');
-  save();
-  render();
+const obVal = s => { const n = Core.calc(String(s || '').trim() || '0'); return isNaN(n) ? NaN : n; };
+// entradas e custos fixos digitados até agora (para a sobra prevista)
+function obTotals() {
+  const inc = Math.max(0, obVal(OB.sal) || 0) + sum(OB.inc, r => Math.max(0, obVal(r.v) || 0)) + (OB.va === true && OB.vaSep === '0' ? Math.max(0, obVal(OB.vaV) || 0) : 0);
+  const fix = sum(OB.fix, r => Math.max(0, obVal(r.v) || 0));
+  return { inc, fix, sobra: inc - fix };
 }
+function obApply() {
+  const o = OB, add = (id, name, kind, v) => S.fixed.push({ id: id || nid('f'), name, kind, sched: [[CUR_YM, Core.round2(v)]] });
+  const nm = String(o.name || '').trim(); if (nm) S.profile = Object.assign({}, S.profile, { name: nm });
+  const sal = obVal(o.sal); if (sal > 0 && !S.fixed.some(f => f.id === 'f_sal')) add('f_sal', 'Salário', 'in', sal);
+  o.inc.forEach(r => { const v = obVal(r.v); if (r.n.trim() && v > 0) add(null, r.n.trim(), 'in', v); });
+  const va = o.va === true ? obVal(o.vaV) : 0;
+  if (va > 0 && !S.fixed.some(f => f.id === 'f_vavr')) {
+    add('f_vavr', 'VA/VR', 'in', va);
+    // separado: saldo próprio, fora da sobra (igual a Ajustes → VA/VR e salário); somado: entra como renda comum
+    if (o.vaSep === '1') { S.vaSep = true; S.env = [{ id: 'e_vavr', name: 'VA/VR', monthly: Core.round2(va), cats: ['*'], est: false, grp: 'A' }]; } else { S.vaSep = false; S.env = []; }
+  } else if (o.va === false) { S.vaSep = false; S.env = []; }
+  const d = parseInt(o.closeDay);
+  if (o.card === true && d >= 1 && d <= 28) { S.closeDay = d; if (S.cards && S.cards[0]) { S.cards[0].closeDay = d; if (o.cardName.trim()) S.cards[0].name = o.cardName.trim(); } }
+  o.fix.forEach(r => { const v = obVal(r.v); if (r.n.trim() && v > 0) add(null, r.n.trim(), 'out', v); });
+  if (o.cxName.trim()) { const g = obVal(o.cxGoal); S.cx.push({ id: nid('c'), name: o.cxName.trim(), mode: +o.cxPct > 0 ? 'direct' : 'none', mult: 1, pct: (+o.cxPct || 0) / 100, start: TODAY, note: '', goal: g > 0 ? { v: Core.round2(g), d: '' } : null }); }
+  S.gs = TODAY; // mostra "Primeiros passos" na Início
+  delete S.obPend;
+  save();
+}
+function obEnter() { OB = null; document.body.classList.remove('auth'); render(); applyUrlShortcut(); window.scrollTo && window.scrollTo(0, 0); }
 const AUTH_DECO = `<svg class="deco" viewBox="0 0 360 240" aria-hidden="true"><g transform="rotate(-14 180 120)"><rect x="40" y="40" width="220" height="140" rx="18" fill="#A28E69" opacity=".9"/><rect x="62" y="68" width="34" height="26" rx="6" fill="#E6D3A8" opacity=".9"/></g><g transform="rotate(-4 200 140)"><rect x="110" y="80" width="230" height="146" rx="18" fill="#407E8D"/><rect x="110" y="118" width="230" height="22" fill="#E6E1DE" opacity=".25"/><rect x="132" y="186" width="70" height="8" rx="4" fill="#E6E1DE" opacity=".55"/></g></svg>`;
 function authShell(heading, lead, cardHtml) {
   document.body.classList.add('auth');
@@ -5358,64 +5448,116 @@ function authShell(heading, lead, cardHtml) {
     <main class="auth-main"><section class="auth-card">${cardHtml}</section></main>
   </div>`;
 }
+// cada passo: frase de apoio (ensina o porquê) na lateral e a pergunta no cartão
+const OB_SIDE = {
+  sal: ['Tudo começa pelo que entra.', 'O salário vira um item fixo: entra sozinho todo mês, sem você precisar lançar de novo.'],
+  inc: ['Outras rendas também contam.', 'O que se repete todo mês entra aqui. Ganho avulso você lança na hora, pelo +.'],
+  va: ['Vale tem lugar próprio.', 'Se você recebe VA/VR, o app acompanha o saldo dele sem misturar com o salário.'],
+  card: ['O cartão tem outro ritmo.', 'Compra no crédito só pesa quando a fatura vence. Por isso o app precisa saber quando ela fecha.'],
+  fix: ['Agora, o que sai todo mês.', 'Custos fixos se repetem sozinhos. Assim você sabe desde o dia 1 quanto vai sobrar.'],
+  cx: ['Guarde com propósito.', 'Caixinha é um cofrinho com objetivo: recebe parte da sobra do mês e mostra quanto rende.']
+};
 function obShell(title, sub, body) {
-  const steps = OB && OB.flowVa === false ? [1, 3, 4] : [1, 2, 3, 4], at = OB ? steps.indexOf(OB.step) : 0;
-  authShell('Vamos deixar o app com a sua cara.', 'Quatro perguntas rápidas e você já começa com tudo configurado.',
-    `<div class="obdots">${steps.map((s, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div><h3>${esc(title)}</h3>${sub ? `<p class="sub">${esc(sub)}</p>` : ''}${body}`);
+  const at = OB_STEPS.indexOf(OB.step), side = OB_SIDE[OB.step];
+  authShell(side[0], side[1],
+    `<div class="obtop"><button class="ib" data-act="obback" aria-label="Voltar">${icon('left', 18)}</button><div class="obdots">${OB_STEPS.map((s, i) => `<i class="${i <= at ? 'on' : ''}"></i>`).join('')}</div><span class="obn">${at + 1} de ${OB_STEPS.length}</span></div>` +
+    `<h3>${esc(title)}</h3>${sub ? `<p class="sub">${sub}</p>` : ''}${OB.err ? `<div class="auth-err">${esc(OB.err)}</div>` : ''}${body}`);
 }
-function renderOnboard() {
+const obMoney = (k, ph = '0,00') => `<div class="amt"><span>R$</span><input class="big" data-ob="${k}" inputmode="numeric" data-money="1" autocomplete="off" placeholder="${ph}" value="${esc(OB[k])}" enterkeyhint="done"></div>`;
+const obRows = k => OB[k].map((r, i) => `<div class="obrow"><input class="in" data-ob="${k}.${i}.n" value="${esc(r.n)}" placeholder="Nome" autocomplete="off" aria-label="Nome"><div class="obv"><span>R$</span><input class="in" data-ob="${k}.${i}.v" inputmode="numeric" data-money="1" value="${esc(r.v)}" placeholder="0,00" autocomplete="off" aria-label="Valor por mês"></div><button class="ib" data-act="obdel" data-k="${k}" data-i="${i}" aria-label="Remover">${icon('x', 15)}</button></div>`).join('');
+const obChips = (k, list) => `<div class="chips obchips">${list.filter(n => !OB[k].some(r => norm(r.n) === norm(n))).map(n => `<button type="button" class="chip sm" data-act="obadd" data-k="${k}" data-n="${esc(n)}">${icon('plus', 13)}${esc(n)}</button>`).join('')}<button type="button" class="chip sm ghost" data-act="obadd" data-k="${k}" data-n="">${icon('plus', 13)}Outro</button></div>`;
+const obBtns = (main, mainLabel, alt, altLabel) => `<button class="btn primary auth-btn" data-act="${main}">${mainLabel}</button>${alt ? `<button class="btn ghost auth-alt" data-act="${alt}">${altLabel}</button>` : ''}`;
+function renderOnboard(focus) {
   if (!OB) return;
   const choice = (act, v, ic, t, s) => `<button class="choice" data-act="${act}" data-v="${v}"><span class="ci">${icon(ic, 20)}</span><span><b>${t}</b>${s ? `<small>${s}</small>` : ''}</span>${icon('right', 18)}</button>`;
-  if (OB.step === 1) {
-    obShell('Você recebe VA/VR?', 'Vale-alimentação ou vale-refeição.', choice('obVa', '1', 'ticket', 'Sim, recebo', 'Vou acompanhar o saldo dele aqui') + choice('obVa', '0', 'x', 'Não recebo', 'Some tudo que for de VA/VR do app'));
-  } else if (OB.step === 2) {
-    obShell('Como tratar o VA/VR?', 'Isso muda se ele entra ou não na sobra do mês.', choice('obVaSep', '1', 'layers', 'Separado do salário', 'Saldo próprio, não entra na sobra') + choice('obVaSep', '0', 'plus', 'Somado ao salário', 'Entra junto nas entradas do mês'));
-  } else if (OB.step === 3) {
-    obShell('Quando fecha a fatura do cartão?', 'Compras feitas a partir desse dia entram na fatura do mês seguinte.', `
-      ${OB.err ? `<div class="auth-err">${esc(OB.err)}</div>` : ''}
-      <div class="fld"><label class="fl">Dia do fechamento (1 a 28)</label><input class="in" id="obClose" type="number" min="1" max="28" inputmode="numeric" placeholder="Ex.: 5" value="${esc(OB.closeDay)}"></div>
-      <button class="btn primary auth-btn" data-act="obClose">Continuar</button>
-      <button class="btn ghost auth-alt" data-act="obNoCard">Não uso cartão de crédito</button>`);
-  } else if (OB.step === 4) {
-    obShell('Qual é a sua renda mensal?', 'Já deixamos o salário lançado como item fixo, pra você não começar do zero.', `
-      <div class="fld"><label class="fl">Renda fixa por mês</label><div class="amt"><span>R$</span><input class="big" id="obSal" inputmode="numeric" data-money="1" placeholder="0,00" value="${esc(OB.sal)}"></div></div>
-      <button class="btn primary auth-btn" data-act="obSal">Começar</button>
-      <button class="btn ghost auth-alt" data-act="obNoSal">Prefiro configurar depois</button>`);
+  const st = OB.step;
+  if (st === 'hi') {
+    authShell('Vamos começar.', 'Em poucos passos o app já mostra quanto sobra no seu mês.', `
+      <h3>Boas-vindas!</h3><p class="sub">Vamos montar o seu mês juntos. Leva uns 2 minutos e dá para mudar tudo depois.</p>
+      <div class="fld"><label class="fl" for="obName">Como podemos te chamar?</label><input class="in" id="obName" data-ob="name" value="${esc(OB.name)}" placeholder="Seu nome" autocomplete="given-name"></div>
+      <div class="obplan">${[['in', 'Suas entradas', 'Salário e outras rendas do mês'], ['repeat', 'Seus custos fixos', 'Aluguel, contas e assinaturas'], ['box', 'Sua primeira caixinha', 'Para guardar o que sobra']].map(([ic, t, s], i) => `<div class="obtip"><span class="ci">${icon(ic, 19)}</span><span><b>${i + 1}. ${t}</b><small>${s}</small></span></div>`).join('')}</div>
+      ${obBtns('obstart', 'Vamos começar', 'obskip', 'Pular e explorar sozinho')}`);
+  } else if (st === 'sal') {
+    obShell('Qual é o seu salário?', 'O valor líquido, que cai na sua conta todo mês.', `<div class="fld">${obMoney('sal')}</div>` + obBtns('obnext', 'Continuar', 'obnosal', 'Não tenho salário fixo'));
+  } else if (st === 'inc') {
+    obShell('Recebe mais alguma coisa todo mês?', 'Toque para adicionar e preencha o valor.', obChips('inc', OB_INC) + obRows('inc') + obBtns('obnext', OB.inc.length ? 'Continuar' : 'Não tenho outras rendas'));
+  } else if (st === 'va') {
+    if (OB.va !== true) obShell('Você recebe VA/VR?', 'Vale-alimentação ou vale-refeição.', choice('obva', '1', 'ticket', 'Sim, recebo', 'Vou acompanhar o saldo dele aqui') + choice('obva', '0', 'x', 'Não recebo', 'Pula esta parte'));
+    else obShell('Quanto você recebe de VA/VR?', 'Por mês, somando os dois se tiver.', `<div class="fld">${obMoney('vaV')}</div>
+      <div class="fld"><label class="fl">Como tratar o VA/VR</label><div class="seg">${[['1', 'Separado do salário'], ['0', 'Somado ao salário']].map(([v, l]) => `<button type="button" class="${OB.vaSep === v ? 'on' : ''}" data-act="obvasep" data-v="${v}">${l}</button>`).join('')}</div></div>
+      <p class="hint">${OB.vaSep === '1' ? 'Separado: tem saldo próprio e não entra na sobra do mês. Você lança os gastos pagando com VA/VR.' : 'Somado: entra junto com o salário e conta na sobra do mês.'}</p>` + obBtns('obnext', 'Continuar', 'obnova', 'Na verdade, não recebo'));
+  } else if (st === 'card') {
+    obShell('Você usa cartão de crédito?', 'Compras feitas a partir do dia do fechamento entram na fatura do mês seguinte.', `
+      <div class="fld"><label class="fl" for="obCard">Nome do cartão (opcional)</label><input class="in" id="obCard" data-ob="cardName" value="${esc(OB.cardName)}" placeholder="Ex.: Nubank" autocomplete="off"></div>
+      <div class="fld"><label class="fl" for="obClose">Dia em que a fatura fecha (1 a 28)</label><input class="in" id="obClose" data-ob="closeDay" type="number" min="1" max="28" inputmode="numeric" placeholder="Ex.: 5" value="${esc(OB.closeDay)}"></div>
+      <p class="hint">Tem mais de um cartão? Depois você adiciona os outros na aba Cartões.</p>` + obBtns('obnext', 'Continuar', 'obnocard', 'Não uso cartão de crédito'));
+  } else if (st === 'fix') {
+    const t = obTotals();
+    obShell('Quais são seus custos fixos?', 'Toque nos que você tem e preencha o valor. Pode ser aproximado.', obChips('fix', OB_FIX) + obRows('fix') +
+      (OB.fix.length ? `<div class="obsum"><span>Total por mês</span><b>${brl(t.fix)}</b></div>` : '') +
+      `<p class="hint">Conta que cai no cartão, como streaming, você marca depois em Ajustes → Itens fixos.</p>` + obBtns('obnext', OB.fix.length ? 'Continuar' : 'Pular por enquanto'));
+  } else if (st === 'cx') {
+    const t = obTotals(), p = +OB.cxPct || 0;
+    obShell('Crie sua primeira caixinha', t.inc > 0 ? `Pelo que você contou, sobram <b>${brl(t.sobra)}</b> por mês antes dos gastos do dia a dia.` : 'Dê um nome e escolha quanto da sobra do mês vai para ela.', `
+      <div class="fld"><label class="fl" for="obCx">Para que é?</label><input class="in" id="obCx" data-ob="cxName" value="${esc(OB.cxName)}" placeholder="Ex.: Reserva de emergência" autocomplete="off"></div>
+      <div class="chips obchips" style="margin-top:-6px">${OB_CX.map(n => `<button type="button" class="chip sm ${OB.cxName === n ? 'on' : ''}" data-act="obcxname" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+      <div class="fld"><label class="fl">Meta (opcional)</label>${obMoney('cxGoal')}</div>
+      <div class="fld"><label class="fl">Quanto da sobra vai para ela todo mês?</label><div class="seg">${[['25', '25%'], ['50', '50%'], ['100', 'Tudo'], ['0', 'Manual']].map(([v, l]) => `<button type="button" class="${OB.cxPct === v ? 'on' : ''}" data-act="obcxpct" data-v="${v}">${l}</button>`).join('')}</div></div>
+      <p class="hint">${p > 0 && t.sobra > 0 ? `Com a sobra de ${brl(t.sobra)}, cerca de <b>${brl(t.sobra * p / 100)}</b> por mês iriam para ela. ` : ''}No fim do mês, o botão “Distribuir” da Início registra isso para você.</p>` + obBtns('obnext', 'Criar caixinha', 'obnocx', 'Criar depois'));
+  } else if (st === 'done') {
+    const t = obTotals(), nm = String(OB.name || '').trim().split(/\s+/)[0];
+    authShell(`Tudo pronto${nm ? ', ' + esc(nm) : ''}!`, 'Seu mês já está montado. Agora é só lançar o dia a dia.', `
+      <h3>Seu mês, por enquanto</h3>
+      ${t.inc > 0 || t.fix > 0 ? `<div class="obres"><div><span>Entradas fixas</span><b class="pos">${brl(t.inc)}</b></div><div><span>Custos fixos</span><b>${brl(t.fix)}</b></div>${OB.va === true && OB.vaSep === '1' && obVal(OB.vaV) > 0 ? `<div><span>VA/VR, à parte</span><b>${brl(obVal(OB.vaV))}</b></div>` : ''}<div><span>Sobra prevista</span><b class="${t.sobra < 0 ? 'neg' : ''}">${brl(t.sobra)}</b></div></div>` : '<p class="sub">Quando cadastrar entradas e custos fixos, a Início mostra a sobra prevista do mês.</p>'}
+      <p class="fl" style="margin:18px 0 8px">Como usar o app</p>${obTipsHtml()}
+      ${obBtns('obend', 'Ir para o app')}`);
   }
+  const au = document.querySelector('#app .auth'); if (au) au.classList.add('ob');
+  const f = document.querySelector(focus || (st === 'sal' ? '[data-ob="sal"]' : null));
+  if (f && f.focus) { try { f.focus(); } catch (e) { } }
 }
-ACT.obVa = el => {
-  const yes = el.dataset.v === '1';
-  if (yes) {
-    S.vaSep = true;
-    if (!S.env.length) S.env = [{ id: 'e_vavr', name: 'VA/VR', monthly: 750, cats: ['*'], est: false, grp: 'A' }];
-    OB.step = 2;
-  } else {
-    S.vaSep = false;
-    S.env = [];
-    OB.flowVa = false;
-    OB.step = 3;
-  }
-  renderOnboard();
+// os campos do passo a passo gravam direto em OB (a máscara de moeda roda antes, na captura)
+document.addEventListener('input', e => {
+  const t = e.target; if (!OB || !t || !t.dataset || t.dataset.ob == null) return;
+  const [k, i, f] = t.dataset.ob.split('.');
+  if (i != null) { if (OB[k][+i]) OB[k][+i][f] = t.value; } else OB[k] = t.value;
+  if (OB.err) { OB.err = ''; const er = document.querySelector('.auth-card .auth-err'); if (er) er.remove(); }
+  if (OB.step === 'fix') { const s = document.querySelector('.obsum b'); if (s) s.textContent = brl(obTotals().fix); }
+});
+document.addEventListener('keydown', e => { if (OB && e.key === 'Enter' && e.target && e.target.dataset && e.target.dataset.ob != null && OB.step !== 'hi' && !/\.n$/.test(e.target.dataset.ob)) { e.preventDefault(); ACT.obnext(); } });
+function obGo(step) { OB.step = step; OB.err = ''; renderOnboard(); window.scrollTo && window.scrollTo(0, 0); }
+const obNextStep = () => OB_STEPS[OB_STEPS.indexOf(OB.step) + 1];
+// linhas de entradas/custos: remove as vazias e acusa as que têm nome sem valor (ou valor sem nome)
+function obCheckRows(k) {
+  OB[k] = OB[k].filter(r => r.n.trim() || String(r.v).trim());
+  const bad = OB[k].find(r => !r.n.trim() || !(obVal(r.v) > 0));
+  return bad ? (bad.n.trim() ? `Preencha o valor de “${bad.n.trim()}” ou remova a linha.` : 'Dê um nome para cada item ou remova a linha.') : '';
+}
+ACT.obstart = () => obGo('sal');
+ACT.obskip = () => { obApply(); obEnter(); };
+ACT.obback = () => { const i = OB_STEPS.indexOf(OB.step); if (OB.step === 'va' && OB.va === true) { OB.va = null; OB.err = ''; renderOnboard(); return; } obGo(i > 0 ? OB_STEPS[i - 1] : 'hi'); };
+ACT.obnext = () => {
+  const st = OB.step; let err = '';
+  if (st === 'sal') { const v = obVal(OB.sal); if (!(v > 0)) err = 'Digite o valor do salário, ou toque em “Não tenho salário fixo”.'; }
+  else if (st === 'inc' || st === 'fix') err = obCheckRows(st);
+  else if (st === 'va') { if (!(obVal(OB.vaV) > 0)) err = 'Digite quanto você recebe de VA/VR por mês.'; }
+  else if (st === 'card') { const d = parseInt(OB.closeDay); if (!(d >= 1 && d <= 28)) err = 'Digite um dia de 1 a 28, ou toque em “Não uso cartão de crédito”.'; else OB.card = true; }
+  else if (st === 'cx') { if (!OB.cxName.trim()) err = 'Dê um nome para a caixinha, ou toque em “Criar depois”.'; else if (isNaN(obVal(OB.cxGoal))) err = 'Valor da meta inválido.'; }
+  if (err) { OB.err = err; renderOnboard(); return; }
+  if (st === 'cx') { obApply(); obGo('done'); return; }
+  obGo(obNextStep());
 };
-ACT.obVaSep = el => {
-  const sep = el.dataset.v === '1';
-  if (!sep) { S.vaSep = false; S.env = []; } // somado ao salário: sem controle separado de VA/VR aqui
-  OB.step = 3;
-  renderOnboard();
-};
-ACT.obClose = () => {
-  const v = ($('obClose') && $('obClose').value || '').trim();
-  const d = parseInt(v);
-  if (!(d >= 1 && d <= 28)) { OB.err = 'Digite um dia de 1 a 28.'; renderOnboard(); return; }
-  OB.closeDay = String(d); OB.err = '';
-  OB.step = 4; renderOnboard();
-};
-ACT.obNoCard = () => { OB.closeDay = ''; OB.step = 4; renderOnboard(); };
-ACT.obSal = () => {
-  OB.sal = ($('obSal') && $('obSal').value || '').trim();
-  finishOnboard();
-};
-ACT.obNoSal = () => { OB.sal = ''; finishOnboard(); };
+ACT.obnosal = () => { OB.sal = ''; obGo('inc'); };
+ACT.obva = el => { if (el.dataset.v === '1') { OB.va = true; OB.err = ''; renderOnboard('[data-ob="vaV"]'); } else { OB.va = false; obGo('card'); } };
+ACT.obvasep = el => { OB.vaSep = el.dataset.v; renderOnboard(); };
+ACT.obnova = () => { OB.va = false; OB.vaV = ''; obGo('card'); };
+ACT.obnocard = () => { OB.card = false; OB.closeDay = ''; obGo('fix'); };
+ACT.obnocx = () => { OB.cxName = ''; obApply(); obGo('done'); };
+ACT.obadd = el => { const k = el.dataset.k, n = el.dataset.n || ''; OB[k].push({ n, v: '' }); OB.err = ''; const i = OB[k].length - 1; renderOnboard(`[data-ob="${k}.${i}.${n ? 'v' : 'n'}"]`); };
+ACT.obdel = el => { OB[el.dataset.k].splice(+el.dataset.i, 1); OB.err = ''; renderOnboard(); };
+ACT.obcxname = el => { OB.cxName = el.dataset.n; OB.err = ''; renderOnboard(); };
+ACT.obcxpct = el => { OB.cxPct = el.dataset.v; renderOnboard(); };
+ACT.obend = () => obEnter();
 
 function renderAuth() {
   const up = authMode === 'signup';
