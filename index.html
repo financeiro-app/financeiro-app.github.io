@@ -4007,7 +4007,8 @@ function accMoves(to) {
   const add = (acc, d, v, item, label, kind, extra) => {
     if (!iso(d) || d > to || Math.abs(v) < 0.005) return;
     const id = accIdOf(acc), s = since.get(id), a = accById(id);
-    if (d > s || (d === s && item && a.sinceUid != null && idn(item) >= a.sinceUid)) out.get(id).push(Object.assign({ d, v, label, kind }, extra || {}));
+    // no dia em que a conta foi cadastrada: entra o lançamento feito depois do cadastro e a conta fixa/fatura desse dia (não estava no saldo informado)
+    if (d > s || (d === s && ((item && a.sinceUid != null && idn(item) >= a.sinceUid) || (!item && extra && extra.key)))) out.get(id).push(Object.assign({ d, v, label, kind }, extra || {}));
   };
   for (const t of S.tx) {
     if (t.t === 'tr') { add(t.from, t.d, -t.v, t, t.desc && t.desc !== 'Transferência' ? t.desc : `Para ${accName(t.to)}`, 'tr'); add(t.to, t.d, t.v, t, t.desc && t.desc !== 'Transferência' ? t.desc : `De ${accName(t.from)}`, 'tr'); }
