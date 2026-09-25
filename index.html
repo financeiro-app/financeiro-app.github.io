@@ -536,6 +536,8 @@ body.auth #app{padding:0;max-width:none}
 .acl small{color:var(--mut);margin-right:8px;font-variant-numeric:tabular-nums}.acl>span:last-child{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .accwarn{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;background:var(--neg-soft);color:var(--neg);border:0;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45;margin-top:10px}
 .accwarn svg{flex:none;margin-top:1px}
+.accnote{display:flex;gap:8px;align-items:flex-start;background:var(--amb-soft);color:var(--amb);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45;margin-top:10px}
+.accnote svg{flex:none;margin-top:2px}.accnote .link{padding:0;font-size:13px;color:inherit;text-decoration:underline}
 .acm{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
 .acm.fut{color:var(--mut)}.acm-d{color:var(--mut);font-variant-numeric:tabular-nums}.acm-l small,.acm-v small{display:block;color:var(--mut);font-size:11.5px}.acm-v{text-align:right;font-variant-numeric:tabular-nums}
 .outtip{background:var(--pos-soft);color:var(--pos);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px;line-height:1.45}
@@ -4066,7 +4068,8 @@ function accInfo(a, mv, cxr) {
   const aPagar = Core.round2(-sum(outs, m => m.v)), entra = Core.round2(sum(ins, m => m.v));
   let run = bal, min = bal, minD = TODAY; for (const m of up) { run += m.v; if (run < min - 0.004) { min = run; minD = m.d; } }
   const cxs = cxr.filter(r => r.c.acc === a.id), cxT = Core.round2(sum(cxs, r => r.atual));
-  return { a, bal, outs, ins, aPagar, entra, livre: Core.round2(bal - aPagar), fim: Core.round2(bal - aPagar + entra), min: Core.round2(min), minD, cxs, cxT, total: Core.round2(bal + cxT) };
+  const semDia = S.fixed.filter(f => f.kind === 'out' && !f.inFatura && !f.day && accIdOf(f.acc) === a.id && Math.abs(M.fv(f, CUR_YM)) > 0.004 && !(f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || '')));
+  return { semDia, a, bal, outs, ins, aPagar, entra, livre: Core.round2(bal - aPagar), fim: Core.round2(bal - aPagar + entra), min: Core.round2(min), minD, cxs, cxT, total: Core.round2(bal + cxT) };
 }
 function viewAccBody() {
   const L = accList();
@@ -4090,6 +4093,7 @@ function viewAccBody() {
       ${x.entra > 0.004 ? `<div class="kv"><span>+ Ainda entra até ${fimTxt}</span><span class="pos">${brl(x.entra)}</span></div><div class="kv"><span>Previsto em ${fimTxt}</span><b class="${x.fim < -0.004 ? 'neg' : ''}">${brl(x.fim)}</b></div>` : ''}
       ${x.cxs.length ? `<div class="kv"><span>Caixinhas neste banco</span><b>${brl(x.cxT)}</b></div><p class="mut sm" style="margin:-4px 0 6px">${x.cxs.map(r => esc(r.c.name)).join(' · ')}</p>` : ''}
       ${warn}
+      ${x.semDia.length ? `<div class="accnote">${icon('calendar', 15)}<span>Sem dia de vencimento: ${x.semDia.map(f => `<button class="link" data-act="fixopts" data-f="${f.id}">${esc(f.name)}</button>`).join(', ')}. Sem o dia, o app não sabe quando o valor sai da conta.</span></div>` : ''}
       <div class="row-btns" style="margin-top:10px"><button class="btn" data-act="accmoves" data-id="${esc(a.id)}">Movimentos</button><button class="btn" data-act="accadjust" data-id="${esc(a.id)}">Acertar saldo</button>${L.length > 1 ? `<button class="btn" data-act="acctr">Transferir</button>` : ''}${x.min < -0.004 && S.cx.length ? `<button class="btn" data-act="cxout">Retirar</button>` : ''}</div>
     </section>`;
   }).join('');
@@ -5065,24 +5069,27 @@ function ptForm(fid, i) {
 ACT.fixopts = el => {
   const f = S.fixed.find(x => x.id === el.dataset.f); const fid = f.id, vaItem = f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || ''); // VA/VR nunca mexe em conta
   openForm({
-    title: 'Opções do item', back: () => fixedDetail(fid), v: { name: f.name, kind: f.kind, cardDay: f.cardDay || '', inFatura: f.inFatura ? '1' : '0', cardId: f.cardId || (S.cards && S.cards[0] ? S.cards[0].id : ''), acc: f.acc || '' },
+    title: 'Opções do item', back: () => fixedDetail(fid), v: { name: f.name, kind: f.kind, cardDay: f.cardDay || '', day: f.day || '', inFatura: f.inFatura ? '1' : '0', cardId: f.cardId || (S.cards && S.cards[0] ? S.cards[0].id : ''), acc: f.acc || '' },
     fields: v => [{ t: 'text', k: 'name', label: 'Nome' }, { t: 'seg', k: 'kind', label: 'Tipo', opts: [['in', 'Entrada'], ['out', 'Saída']] },
-      { t: 'num', k: 'cardDay', label: 'Dia da cobrança (opcional)', ph: 'Ex.: 8' },
       { t: 'seg', k: 'inFatura', label: 'Sai no cartão?', opts: [['0', 'Não'], ['1', 'Sim']] },
+      v.inFatura === '1' ? { t: 'num', k: 'cardDay', label: 'Dia da cobrança no cartão (opcional)', ph: 'Ex.: 8' } : { t: 'num', k: 'day', label: v.kind === 'in' ? 'Dia em que cai na conta' : 'Dia do vencimento (sai da conta)', ph: 'Ex.: 25' },
+      v.inFatura !== '1' && !String(v.day || '').trim() && v.kind === 'out' ? { t: 'note', html: 'Sem o dia, o app considera o dia 1º: numa conta cadastrada depois disso, o valor não aparece como “a pagar”.' } : null,
       ...(v.inFatura === '1' && S.cards && S.cards.length > 1 ? [{ t: 'seg', k: 'cardId', label: 'Cartão', opts: S.cards.map(c => [c.id, c.name]) }] : []),
       ...(v.inFatura !== '1' && !vaItem && accMulti() ? [accField('acc', 'Conta', v)] : [])],
     del: () => { commit(S => { S.fixed = S.fixed.filter(x => x.id !== fid); }, 'Item removido'); },
-    save: v => { if (!v.name.trim()) return 'Dê um nome ao item.'; commit(S => { const g = S.fixed.find(x => x.id === fid); g.name = v.name.trim(); g.kind = v.kind; const d = parseInt(v.cardDay); if (d >= 1 && d <= 31) g.cardDay = d; else delete g.cardDay; if (v.inFatura === '1') { g.inFatura = true; if (v.cardId) g.cardId = v.cardId; else delete g.cardId; } else { delete g.inFatura; delete g.cardId; } if (accMulti()) { if (v.inFatura !== '1' && !vaItem && accById(v.acc)) g.acc = v.acc; else delete g.acc; } }, 'Item atualizado'); }
+    save: v => { if (!v.name.trim()) return 'Dê um nome ao item.'; const dd = String((v.inFatura === '1' ? v.cardDay : v.day) || '').trim(); if (dd && !(+dd >= 1 && +dd <= 31)) return 'O dia precisa ser de 1 a 31.'; commit(S => { const g = S.fixed.find(x => x.id === fid); g.name = v.name.trim(); g.kind = v.kind; if (v.inFatura === '1') { const d = parseInt(v.cardDay); if (d >= 1 && d <= 31) g.cardDay = d; else delete g.cardDay; } else { const d = parseInt(v.day); if (d >= 1 && d <= 31) g.day = d; else delete g.day; }
+      if (v.inFatura === '1') { g.inFatura = true; if (v.cardId) g.cardId = v.cardId; else delete g.cardId; } else { delete g.inFatura; delete g.cardId; } if (accMulti()) { if (v.inFatura !== '1' && !vaItem && accById(v.acc)) g.acc = v.acc; else delete g.acc; } }, 'Item atualizado'); }
   });
 };
 ACT.fixnew = () => openForm({
-  title: 'Novo item fixo', v: { name: '', kind: 'out', val: '', m: CUR_YM, card: '0', cardDay: '', cardId: S.cards && S.cards[0] ? S.cards[0].id : '', acc: '' },
+  title: 'Novo item fixo', v: { name: '', kind: 'out', val: '', m: CUR_YM, card: '0', cardDay: '', day: '', cardId: S.cards && S.cards[0] ? S.cards[0].id : '', acc: '' },
   fields: v => [
     { t: 'text', k: 'name', label: 'Nome', ph: 'Ex.: Internet, YouTube Premium' },
     { t: 'seg', k: 'kind', opts: [['out', 'Saída'], ['in', 'Entrada']] },
     { t: 'money', k: 'val', label: 'Valor por mês' },
     ...(v.kind === 'out' ? [{ t: 'seg', k: 'card', label: 'Onde sai', opts: [['0', 'Conta'], ['1', 'Recorrente no cartão']] }] : []),
     ...(accMulti() && (v.kind === 'in' || v.card !== '1') ? [accField('acc', 'Conta', v)] : []),
+    ...(v.kind === 'in' || v.card !== '1' ? [{ t: 'num', k: 'day', label: v.kind === 'in' ? 'Dia em que cai na conta (opcional)' : 'Dia do vencimento (opcional)', ph: 'Ex.: 10' }] : []),
     ...(v.kind === 'out' && v.card === '1' ? [
       { t: 'num', k: 'cardDay', label: 'Dia da cobrança no cartão', ph: 'Ex.: 3' },
       { t: 'note', html: 'É o dia em que a cobrança aparece na sua fatura. Com o dia de fechamento configurado, o app calcula sozinho em qual fatura de cada mês ela entra.' },
@@ -5094,7 +5101,7 @@ ACT.fixnew = () => openForm({
     const card = v.kind === 'out' && v.card === '1'; const day = parseInt(v.cardDay);
     if (card && !(day >= 1 && day <= 31)) return 'Digite o dia da cobrança (de 1 a 31).';
     const acc = !card && accMulti() && !/^va\/vr$/i.test(v.name.trim()) && accById(v.acc) ? v.acc : null;
-    commit(S => { S.fixed.push({ id: nid('f'), name: v.name.trim(), kind: v.kind, sched: [[v.m, Core.round2(n)]], ...(card ? { inFatura: true, cardDay: day, ...(v.cardId ? { cardId: v.cardId } : {}) } : {}), ...(acc ? { acc } : {}) }); }, 'Item criado');
+    commit(S => { S.fixed.push({ id: nid('f'), name: v.name.trim(), kind: v.kind, sched: [[v.m, Core.round2(n)]], ...(card ? { inFatura: true, cardDay: day, ...(v.cardId ? { cardId: v.cardId } : {}) } : {}), ...(acc ? { acc } : {}), ...(!card && parseInt(v.day) >= 1 && parseInt(v.day) <= 31 ? { day: parseInt(v.day) } : {}) }); }, 'Item criado');
   }
 });
 
