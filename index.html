@@ -1444,7 +1444,7 @@ function load() {
 }
 function save() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOK = false; render(); } if (typeof cloudSave === 'function') cloudSave(); }, 120);
+  saveTimer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOK = false; render(); } if (typeof cloudSave === 'function') cloudSave(); if (typeof alertsSync === 'function') alertsSync(); }, 120);
 }
 const nid = p => `${p}${S.uid++}`;
 function commit(mut, msg) {
@@ -4079,7 +4079,7 @@ function viewAccBody() {
     const a = x.a, open = UI.open['acp' + a.id], k = 'acp' + a.id;
     const W = Math.max(x.total, x.aPagar, 1), w = v => (Math.max(0, v) / W * 100).toFixed(1);
     const bar = x.total > 0.004 ? `<div class="accbar"><i style="width:${w(x.livre)}%;background:var(--pos)"></i><i style="width:${w(Math.min(x.aPagar, Math.max(0, x.bal)))}%;background:var(--amb)"></i><i style="width:${w(x.cxT)}%;background:var(--teal)"></i></div><div class="flowleg"><span><i style="background:var(--pos)"></i>Livre</span><span><i style="background:var(--amb)"></i>A pagar</span>${x.cxT > 0.004 ? '<span><i style="background:var(--teal)"></i>Caixinhas</span>' : ''}</div>` : '';
-    const warn = x.min < -0.004 ? `<div class="accwarn">${icon('alert', 16)}<span>Vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}. ${S.cx.length ? 'Retire de uma caixinha' : ''}${S.cx.length && L.length > 1 ? ' ou transfira de outra conta' : L.length > 1 ? 'Transfira de outra conta' : ''}${S.cx.length || L.length > 1 ? '.' : ''}</span></div>` : '';
+    const warn = x.min < -0.004 ? `<div class="accwarn">${icon('alert', 16)}<span>${alertsOn() ? '' : '<button class="link" style="float:right;padding:0 0 0 8px;font-size:13px" data-act="alerts">Me avisar</button>'}Vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}. ${S.cx.length ? 'Retire de uma caixinha' : ''}${S.cx.length && L.length > 1 ? ' ou transfira de outra conta' : L.length > 1 ? 'Transfira de outra conta' : ''}${S.cx.length || L.length > 1 ? '.' : ''}</span></div>` : '';
     return `<section class="card acccard${UI.accFocus === a.id ? ' focus' : ''}" id="acc-${esc(a.id)}">
       <div class="ac-h">${accBadge(a)}<div class="ac-t"><b>${esc(a.name)}</b><small>${i === 0 && L.length > 1 ? 'conta padrão' : 'conta'}${x.cxs.length ? ` · total no banco ${brl(x.total)}` : ''}</small></div><button class="link" data-act="accedit" data-id="${esc(a.id)}">Editar</button></div>
       ${bar}
@@ -4095,6 +4095,58 @@ function viewAccBody() {
   }).join('');
   return strip + cards + `<div class="row-btns" style="margin-top:4px"><button class="btn" data-act="accnew">${icon('plus', 18)} Nova conta</button></div>` + (anyCx ? '' : `<p class="mut sm pad" style="margin-top:10px">Dica: ao editar uma caixinha, escolha em qual banco ela fica. Ela passa a somar no total do banco, e o que você guarda ou retira sai e volta para essa conta.</p>`);
 }
+// ---------- avisos de saldo negativo (plano A: sem servidor) ----------
+// Calcula, para os próximos 40 dias, o primeiro dia em que cada conta passa a ficar negativa e grava em Cache Storage;
+// o service worker (sw.js) mostra a notificação no dia anterior. A preferência é por aparelho.
+const ALERT_KEY = 'cfp:alerts';
+const alertsOn = () => { try { return localStorage.getItem(ALERT_KEY) === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted'; } catch (e) { return false; } };
+function negAlerts() {
+  const L = accList(); if (!L.length) return [];
+  const to = Core.fromDn(Core.pd(TODAY) + 40), mv = accMoves(to), bal = new Map(accBalances(TODAY).map(x => [x.a.id, x.bal])), out = [];
+  for (const a of L) {
+    const up = (mv.get(a.id) || []).filter(m => !accDone(m, TODAY));
+    let run = bal.get(a.id) || 0, i = 0;
+    while (i < up.length) {
+      const d = up[i].d, day = []; while (i < up.length && up[i].d === d) day.push(up[i++]);
+      const before = run; run = Core.round2(run + sum(day, m => m.v));
+      if (before > -0.005 && run < -0.004) {
+        const why = day.filter(m => m.v < 0).sort((x, y) => x.v - y.v).slice(0, 2).map(m => m.label).join(', ');
+        const at = d === TODAY ? TODAY : Core.fromDn(Core.pd(d) - 1), quando = d === TODAY ? 'hoje' : d === Core.fromDn(Core.pd(TODAY) + 1) ? 'amanhã' : 'em ' + dmy(d);
+        const val = PRIV ? '' : `: −R$ ${moneyFmt(-run)}`;
+        out.push({ id: `${a.id}:${d}`, at, d, title: `${a.name} fica negativa ${d === TODAY ? 'hoje' : 'amanhã'}`, body: `Saldo previsto ${quando}${val}${why ? ` (${why})` : ''}. Transfira ou retire de uma caixinha.` });
+      }
+    }
+  }
+  return out;
+}
+let alertsTimer = null;
+function alertsSync() {
+  clearTimeout(alertsTimer);
+  alertsTimer = setTimeout(async () => {
+    try {
+      if (typeof caches === 'undefined') return;
+      const c = await caches.open('cfp-alerts');
+      if (!alertsOn() || !authUser || !S) { await c.delete('alerts.json'); return; }
+      await c.put('alerts.json', new Response(JSON.stringify({ list: negAlerts(), at: TODAY }), { headers: { 'Content-Type': 'application/json' } }));
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.ready; if (reg && reg.active) reg.active.postMessage({ type: 'alerts-check' });
+    } catch (e) { }
+  }, 900);
+}
+async function alertsPeriodic() { // pede ao Android para acordar o app ~1 vez por dia (só funciona instalado)
+  try { const reg = await navigator.serviceWorker.ready; if (!('periodicSync' in reg)) return false; const st = await navigator.permissions.query({ name: 'periodic-background-sync' }); if (st.state !== 'granted') return false; await reg.periodicSync.register('cfp-alerts', { minInterval: 12 * 3600e3 }); return true; } catch (e) { return false; }
+}
+function alertsBoot() { if (alertsOn()) { alertsPeriodic(); alertsSync(); } }
+ACT.alerts = async () => {
+  if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) { openInfo('Avisos de saldo negativo', '<p class="mut">Este navegador não permite notificações. No Android, use o app baixado ou o Chrome com o site instalado.</p>'); return; }
+  if (alertsOn()) { try { localStorage.setItem(ALERT_KEY, '0'); } catch (e) { } try { const reg = await navigator.serviceWorker.ready; if (reg.periodicSync) await reg.periodicSync.unregister('cfp-alerts'); } catch (e) { } alertsSync(); render(); toast('Avisos desligados'); return; }
+  const p = await Notification.requestPermission();
+  if (p !== 'granted') { openInfo('Avisos de saldo negativo', '<p class="mut">As notificações estão bloqueadas para o app. Libere nas configurações do celular (Apps → Controle Financeiro → Notificações) e tente de novo.</p>'); return; }
+  try { localStorage.setItem(ALERT_KEY, '1'); } catch (e) { }
+  const bg = await alertsPeriodic();
+  try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('Avisos ligados', { body: 'Você vai receber um aviso um dia antes de uma conta ficar negativa, com a conta e o valor.', icon: 'icon-192.png', tag: 'cfp-test' }); } catch (e) { }
+  alertsSync(); render();
+  openInfo('Avisos de saldo negativo', `<p class="lead">Ligado neste aparelho.</p><p class="mut" style="margin-top:8px">${bg ? 'O celular vai acordar o app mais ou menos uma vez por dia para conferir. O horário exato quem decide é o Android, então o aviso pode chegar algumas horas antes ou depois.' : 'Neste aparelho o aviso chega quando o app é aberto. Para receber com o app fechado, use o app para Android (ou instale o site no Chrome do Android).'}</p><p class="mut" style="margin-top:8px">Os avisos usam o que está lançado no app: abra o app de vez em quando para a previsão ficar em dia.</p><div class="sheet-foot"><button class="btn primary" data-act="fclose">Entendi</button></div>`);
+};
 // movimentos do mês com o saldo linha a linha (o que ainda vai acontecer aparece como previsto)
 ACT.accmoves = el => {
   const a = accById(el.dataset.id); if (!a) return;
@@ -4542,6 +4594,7 @@ function viewMore() {
       set('upload', 'Importar extrato', 'Arquivo OFX ou CSV exportado do banco', 'impstart') +
       set('save', 'Backup', 'Exportar ou importar todos os seus dados', 'dados')) +
     group('Privacidade e app',
+      set('bell', 'Avisos de saldo negativo', alertsOn() ? 'Ligado · avisa um dia antes, com a conta e o valor' : 'Notificação um dia antes de uma conta ficar negativa', 'alerts') +
       set(PRIV ? 'eyeoff' : 'eye', PRIV ? 'Valores escondidos' : 'Esconder valores', PRIV ? 'Toque para mostrar de novo' : 'Troca os valores por •••• em todas as telas', 'priv') +
       (isStandalone() ? '' : isAndroid() ? set('phone', 'Baixar o app para Android', 'Ícone próprio, abre em tela cheia', 'apkdl') : set('phone', 'Instalar o app', 'Ícone na tela do celular, abre em tela cheia e sem internet', 'install'))) +
     `<div class="group-t">Aparência</div><div class="seg">${[['light', 'Clara'], ['dark', 'Escura'], ['auto', 'Automática']].map(([k, l]) => `<button class="${th === k ? 'on' : ''}" data-act="theme" data-v="${k}">${l}</button>`).join('')}</div>` +
@@ -5610,7 +5663,7 @@ function applyUrlShortcut() {
   let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
   if (!q.has('novo') && !q.has('tab')) return;
   try { history.replaceState(null, '', location.pathname); } catch (e) { }
-  const t = q.get('tab'); if (t && ['home', 'ext', 'cards', 'pat', 'plan', 'rel'].includes(t)) { UI.tab = t; render(); }
+  const t = q.get('tab'); if (t === 'contas') { UI.tab = 'pat'; UI.pat = 'acc'; render(); } else if (t && ['home', 'ext', 'cards', 'pat', 'plan', 'rel'].includes(t)) { UI.tab = t; render(); }
   if (q.has('novo')) openEntry({ mode: 'out' });
 }
 
@@ -5642,6 +5695,7 @@ async function startApp(user) {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { }
   try { applyTheme(localStorage.getItem(THEME_KEY) || 'light'); } catch (e) { }
   if (S.obPend || (!S.obSeen && !S.gs)) startOnboard(); else { render(); applyUrlShortcut(); }
+  alertsBoot();
 }
 
 // ---------- boas-vindas: passo a passo da conta nova (antes do 1º render do app) ----------
@@ -5966,7 +6020,7 @@ ACT.authSubmit = async () => {
   if (authMode === 'signup' && !data.session) { authErr = 'Conta criada! Verifique seu e-mail para confirmar antes de entrar.'; authMode = 'login'; renderAuth(); return; }
   // sessão criada: onAuthStateChange abaixo inicia o app
 };
-ACT.logout = async () => { try { await sb.auth.signOut(); } catch (e) { } };
+ACT.logout = async () => { try { if ('caches' in window) await caches.delete('cfp-alerts'); } catch (e) { } try { await sb.auth.signOut(); } catch (e) { } };
 sb.auth.onAuthStateChange((event, session) => {
   if (session && session.user) {
     if (!authUser || authUser.id !== session.user.id) startApp(session.user);
