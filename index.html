@@ -423,9 +423,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 #nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--nav);-webkit-backdrop-filter:saturate(1.4) blur(18px);backdrop-filter:saturate(1.4) blur(18px);border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);padding-bottom:env(safe-area-inset-bottom)}
 .nav-in{max-width:600px;margin:0 auto}
 .nav-in .brand,.nav-in .newbtn,.nav-in .nav-foot{display:none}
-.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 62px repeat(3,minmax(0,1fr));align-items:center;height:66px}
-.tabs .tab{font-size:10px;letter-spacing:-.01em;min-width:0}
-@media (max-width:380px){.tabs .tab{font-size:9.5px}}.tabs .tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:center;height:66px}.tabs .tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tab{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--mut);font-size:11px;font-weight:600;padding:6px 0;position:relative;transition:color .25s}
 .tab svg{transition:transform .35s var(--spring)}
 .tab.on{color:var(--ink)}
@@ -969,6 +967,23 @@ body.auth #app{padding:0;max-width:none}
 
 /* ---------- relatórios ---------- */
 .tab.desk{display:none}
+#drawer{position:fixed;inset:0;z-index:70;display:none}
+#drawer.open{display:block}
+.drw-back{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .25s}
+#drawer.in .drw-back{opacity:1}
+.drw{position:absolute;top:0;bottom:0;left:0;width:80%;max-width:340px;background:var(--bg);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));overflow-y:auto;transform:translateX(-102%);transition:transform .3s var(--ease);border-radius:0 24px 24px 0}
+#drawer.in .drw{transform:none}
+.drw-h{display:flex;align-items:center;gap:12px;padding:6px 8px 18px}
+.drw-h .av{width:44px;height:44px;border-radius:50%;background:var(--tan);color:#fff;display:grid;place-items:center;font-weight:600;font-size:17px;flex:none}
+.drw-h b{display:block;font-weight:600;font-size:15.5px}.drw-h small{display:block;color:var(--mut);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.drw-l{display:flex;flex-direction:column;gap:2px}
+.drw-i{display:flex;align-items:center;gap:14px;width:100%;padding:12px 12px;border:0;background:none;border-radius:14px;font-size:15px;font-weight:500;color:var(--ink-2);text-align:left}
+.drw-i svg{color:var(--mut)}
+.drw-i.on{background:var(--card-3);color:var(--ink);font-weight:600}.drw-i.on svg{color:var(--acc)}
+.drw-i:active{background:var(--card-2)}
+.drw-sep{height:1px;background:var(--line);margin:10px 8px}
+.drw-f{display:flex;align-items:center;gap:10px;margin-top:auto;padding:18px 10px 0;color:var(--mut);font-size:13px;font-weight:600}
+.menubtn{margin-right:2px}
 .moregrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 6px;margin:4px 0 10px}
 .moregrid .qa-item{width:auto}
 .rperiod{margin:0 0 14px}
@@ -1027,7 +1042,8 @@ button.rrow:hover .rl b{color:var(--acc)}
   .tabs .tab.desk{display:flex}
   .tabs .tab.mob{display:none}
   .acc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:0 18px;align-items:start}
-  .tabs .tab{font-size:14.5px}
+  .tabs [data-tab="home"]{order:1}.tabs [data-tab="ext"]{order:2}.tabs [data-tab="acc"]{order:3}.tabs [data-tab="cards"]{order:4}.tabs [data-tab="pat"]{order:5}.tabs [data-tab="plan"]{order:6}.tabs [data-tab="rel"]{order:7}.tabs [data-tab="calc"]{order:8}
+  .menubtn,#drawer{display:none!important}
   .rkpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
   .rep-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
   .rep-home{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:28px;align-items:start}
@@ -1059,6 +1075,7 @@ button.rrow:hover .rl b{color:var(--acc)}
 <main id="app"></main>
 <nav id="nav" aria-label="Navegação principal"></nav>
 <div id="sheet"></div>
+<div id="drawer"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script id="seed" type="application/json">{"v":1,"startYm":"2026-09","selic":0,"sobraOverride":null,"cats":["Mercado","Comida","Transporte","Lazer","Outros"],"incCats":["Salário","Outros"],"fixed":[],"env":[],"tx":[],"cx":[],"ap":[],"inv":{"aporte":0,"divisor":1,"classes":[],"assets":[]},"uid":1,"mig":["comida1","receber1","fat0926","fat0926b","fat0926c","fat0926d","fat0926e","pai530","fecha2","adv0926","fat0926f","ml0926","fech0926","vavr0926","vavr0926c","sobra0926","sobra0926b","vaFrom0901","vaOutros0926","vaOutros0926b"],"closeDay":1,"vaMode":"lancado","adv":{},"fech":{},"vaSep":false,"autocat":[]}</script>
@@ -1785,6 +1802,7 @@ const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ
 
 // ---------- ícones extras ----------
 Object.assign(IC, {
+  menu: '<path d="M4 7h16M4 12h16M4 17h11"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
   cart: '<path d="M3 4h2.2l2.1 10.2a1.5 1.5 0 0 0 1.5 1.2h8.4a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.1"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>',
@@ -1902,7 +1920,8 @@ const cardOf = t => { const cs = M.cardsList(); return cs.find(c => c.id === M.c
 
 // ---------- pedaços reutilizáveis ----------
 function topbar(title, greet, back) {
-  return `<header class="topbar">${back ? `<button class="backbtn mob" data-act="${back}" aria-label="Voltar">${icon('left', 20)}</button>` : ''}<div class="tt" style="flex:1">${greet ? `<div class="greet">${greet}</div>` : ''}<h1>${title}</h1></div><button class="ib privbtn" data-act="priv" aria-label="${PRIV ? 'Mostrar valores' : 'Esconder valores'}" title="${PRIV ? 'Mostrar valores' : 'Esconder valores'}">${icon(PRIV ? 'eyeoff' : 'eye', 20)}</button><button class="avatar-btn" data-act="goset" aria-label="Perfil e ajustes">${esc(initials())}</button></header>`;
+  const menu = !back || back === 'relback';
+  return `<header class="topbar">${menu ? `<button class="backbtn menubtn" data-act="drawer" aria-label="Abrir menu">${icon('menu', 20)}</button>` : `<button class="backbtn mob" data-act="${back}" aria-label="Voltar">${icon('left', 20)}</button>`}<div class="tt" style="flex:1">${greet ? `<div class="greet">${greet}</div>` : ''}<h1>${title}</h1></div><button class="ib privbtn" data-act="priv" aria-label="${PRIV ? 'Mostrar valores' : 'Esconder valores'}" title="${PRIV ? 'Mostrar valores' : 'Esconder valores'}">${icon(PRIV ? 'eyeoff' : 'eye', 20)}</button><button class="avatar-btn" data-act="goset" aria-label="Perfil e ajustes">${esc(initials())}</button></header>`;
 }
 const monthNav = () => `<div class="mswitch"><button class="ib" data-act="ym" data-d="-1" aria-label="Mês anterior">${icon('left', 18)}</button><button class="mlabel" data-act="ymnow" aria-label="Voltar para o mês atual">${MES_L[+UI.ym.slice(5, 7) - 1]}<small>${UI.ym.slice(0, 4)}${UI.ym === CUR_YM ? ' · atual' : ''}</small></button><button class="ib" data-act="ym" data-d="1" aria-label="Próximo mês">${icon('right', 18)}</button></div>`;
 const dd = (k, title, sm, body) => `<section class="card"><button class="card-h btn-h" data-act="tog" data-t="${k}" aria-expanded="${UI.open[k] ? 'true' : 'false'}"><h3>${title}</h3><b>${sm} <span class="mut">${UI.open[k] ? '▴' : '▾'}</span></b></button>${UI.open[k] ? body : ''}</section>`;
@@ -4127,6 +4146,45 @@ function accInfo(a, mv, cxr) {
 }
 function viewAccTab() { return topbar('Contas', 'Saldo e o que ainda sai') + viewAccBody(); }
 function viewCalcTab() { return topbar('Calculadoras', 'Simule antes de decidir', 'relback') + viewCalcBody(); }
+// ---------- menu lateral (celular): desliza da esquerda, 80% da tela ----------
+// Abre pelo ☰ do topo. Fecha tocando fora, deslizando para a esquerda ou no "voltar" do celular (não abre pela borda:
+// no Android com gestos, deslizar da borda esquerda é o "voltar").
+let DRW = false, DRW_SKIP = 0; // DRW_SKIP: popstate causado pelo próprio fechamento (history.back), que deve ser ignorado
+function drawerHtml() {
+  const L = [['home', 'Início', 'home'], ['ext', 'Extrato', 'list'], ['acc', 'Contas', 'bank'], ['cards', 'Cartões', 'card'], ['pat', 'Patrimônio', 'trend'], ['plan', 'Planejamento', 'plan'], ['rel', 'Relatórios', 'chart'], ['calc', 'Calculadoras', 'calc']];
+  const T = [['repeat', 'Itens fixos', 'openfix'], ['upload', 'Importar extrato', 'impstart'], ['cog', 'Ajustes', 'goset']];
+  const it = (ic, l, act, attrs, on) => `<button class="drw-i${on ? ' on' : ''}" data-act="${act}" ${attrs}>${icon(ic, 20)}<span>${l}</span></button>`;
+  return `<div class="drw-back" data-act="drawerclose"></div><aside class="drw" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="drw-h"><span class="av">${esc(initials())}</span><div><b>${esc(userName() || 'Você')}</b><small>${esc((authUser && authUser.email) || '')}</small></div></div>
+    <nav class="drw-l">${L.map(x => it(x[2], x[1], 'drawgo', `data-tab="${x[0]}"`, UI.tab === x[0])).join('')}</nav>
+    <div class="drw-sep"></div>
+    <div class="drw-l">${T.map(x => it(x[0], x[1], 'drawdo', `data-do="${x[2]}"`, x[2] === 'goset' && UI.tab === 'more')).join('')}${authUser ? it('logout', 'Sair da conta', 'drawdo', 'data-do="logout"') : ''}</div>
+    <div class="drw-f">${LOGO(26)}<span>Controle Financeiro</span></div>
+  </aside>`;
+}
+function openDrawer() {
+  const el = $('drawer'); if (!el) return;
+  el.classList.remove('in'); el.innerHTML = drawerHtml(); el.classList.add('open'); document.body.classList.add('lock'); DRW = true;
+  try { history.pushState({ drw: 1 }, ''); } catch (e) { }
+  void el.offsetWidth; el.classList.add('in'); // força o layout antes: a transição roda sem depender de requestAnimationFrame
+}
+function closeDrawer(fromPop) {
+  const el = $('drawer'); if (!el || !DRW) return;
+  DRW = false; el.classList.remove('in'); document.body.classList.remove('lock');
+  setTimeout(() => { if (!DRW) { el.classList.remove('open'); el.innerHTML = ''; } }, 260);
+  if (!fromPop) { try { if (history.state && history.state.drw) { DRW_SKIP++; history.back(); } } catch (e) { } }
+}
+window.addEventListener('popstate', () => { if (DRW_SKIP) { DRW_SKIP--; return; } if (DRW) closeDrawer(true); });
+ACT.drawer = () => openDrawer();
+ACT.drawerclose = () => closeDrawer();
+ACT.drawgo = el => { const t = el.dataset.tab; closeDrawer(); if (t === 'plan') ACT.openplan({ dataset: {} }); else if (t === 'rel') ACT.openrel(); else ACT.go({ dataset: { tab: t } }); };
+ACT.drawdo = el => { const a = el.dataset.do; closeDrawer(); if (ACT[a]) ACT[a](el); };
+(() => { // deslizar para a esquerda fecha
+  let x0 = null, dx = 0;
+  document.addEventListener('touchstart', e => { if (DRW && e.target.closest && e.target.closest('.drw')) { x0 = e.touches[0].clientX; dx = 0; } }, { passive: true });
+  document.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.min(0, e.touches[0].clientX - x0); const d = document.querySelector('#drawer .drw'); if (d) { d.style.transition = 'none'; d.style.transform = `translateX(${dx}px)`; } }, { passive: true });
+  document.addEventListener('touchend', () => { if (x0 == null) return; const d = document.querySelector('#drawer .drw'); if (d) { d.style.transition = ''; d.style.transform = ''; } if (dx < -70) closeDrawer(); x0 = null; });
+})();
 ACT.moremenu = () => {
   const it = [['plan', 'Planejamento', 'go', 'data-tab="plan"'], ['chart', 'Relatórios', 'go', 'data-tab="rel"'], ['calc', 'Calculadoras', 'go', 'data-tab="calc"'], ['upload', 'Importar', 'impstart', ''], ['repeat', 'Itens fixos', 'openfix', ''], ['cog', 'Ajustes', 'go', 'data-tab="more"']];
   openInfo('Mais', `<div class="moregrid">${it.map(x => qaItem(x[0], x[1], x[2] === 'go' ? 'moreGo' : x[2], x[3])).join('')}</div>`);
@@ -4689,7 +4747,7 @@ function renderNav() {
   const nav = $('nav'); if (!nav) return;
   if (!nav.querySelector('.tabs')) {
     const t = (k, l, ic) => `<button class="tab" data-act="go" data-tab="${k}" aria-label="${l}">${icon(ic, 22)}<span>${l}</span></button>`;
-    nav.innerHTML = `<div class="nav-in"><div class="brand">${LOGO(30)}<b>Controle Financeiro</b></div><button class="btn primary newbtn" data-act="add" data-m="out">${icon('plus', 18)} Novo lançamento</button><div class="tabs">${t('home', 'Início', 'home')}${t('ext', 'Extrato', 'list')}${t('acc', 'Contas', 'bank')}<div class="fab-slot"><button class="fab" data-act="add" data-m="out" aria-label="Novo lançamento">${icon('plus', 26)}</button></div>${t('cards', 'Cartões', 'card')}${t('pat', 'Patrimônio', 'trend')}${t('plan', 'Planejamento', 'plan').replace('class="tab"', 'class="tab desk"')}${t('rel', 'Relatórios', 'chart').replace('class="tab"', 'class="tab desk"')}${t('calc', 'Calculadoras', 'calc').replace('class="tab"', 'class="tab desk"')}<button class="tab mob" data-act="moremenu" aria-label="Mais">${icon('more', 22)}<span>Mais</span></button></div><div class="nav-foot">${t('more', 'Ajustes', 'cog')}<button class="nav-user" data-act="goset"><span class="av"></span><span style="min-width:0"><b></b><small></small></span></button></div></div>`;
+    nav.innerHTML = `<div class="nav-in"><div class="brand">${LOGO(30)}<b>Controle Financeiro</b></div><button class="btn primary newbtn" data-act="add" data-m="out">${icon('plus', 18)} Novo lançamento</button><div class="tabs">${t('home', 'Início', 'home')}${t('acc', 'Contas', 'bank')}<div class="fab-slot"><button class="fab" data-act="add" data-m="out" aria-label="Novo lançamento">${icon('plus', 26)}</button></div>${t('cards', 'Cartões', 'card')}${t('ext', 'Extrato', 'list')}${t('pat', 'Patrimônio', 'trend').replace('class="tab"', 'class="tab desk"')}${t('plan', 'Planejamento', 'plan').replace('class="tab"', 'class="tab desk"')}${t('rel', 'Relatórios', 'chart').replace('class="tab"', 'class="tab desk"')}${t('calc', 'Calculadoras', 'calc').replace('class="tab"', 'class="tab desk"')}</div><div class="nav-foot">${t('more', 'Ajustes', 'cog')}<button class="nav-user" data-act="goset"><span class="av"></span><span style="min-width:0"><b></b><small></small></span></button></div></div>`;
   }
   nav.querySelectorAll('.tab').forEach(b => { const on = b.dataset.tab === UI.tab; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const u = nav.querySelector('.nav-user');
