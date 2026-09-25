@@ -149,6 +149,19 @@ small.cur{font-size:.72em;font-weight:500;opacity:.7;margin-right:2px}
 .qa-item{flex:none;display:flex;flex-direction:column;align-items:center;gap:7px;width:70px;background:none;border:0;padding:0;scroll-snap-align:start;font-size:12px;font-weight:500;color:var(--ink-2)}
 .qa-item .qi{width:54px;height:54px;border-radius:18px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);box-shadow:var(--shadow-sm);transition:transform .18s var(--ease),background .2s}
 .qa-item:active .qi{transform:scale(.9)}
+.qa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 4px;overflow:visible;margin:0 0 18px;padding:2px 0 4px}
+.qa-grid .qa-item{width:auto;min-width:0}
+.accsplit{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:10px}
+.accsplit button{display:inline-flex;align-items:center;gap:6px;background:rgba(244,239,232,.08);border:0;color:var(--hero-ink);border-radius:999px;padding:5px 10px;font-size:12px}
+.accsplit i{width:8px;height:8px;border-radius:50%}.accsplit span{color:var(--hero-mut)}.accsplit b{font-weight:600}
+.accwarn.home{margin:-4px 0 16px}
+.actbar{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-top:12px}
+.actbar button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px 9px;border-radius:14px;background:var(--card-2);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--ink-2);transition:transform .15s,border-color .2s}
+.actbar button:active{transform:scale(.96)}.actbar button:hover{border-color:var(--acc)}.actbar svg{color:var(--acc)}
+.fxh{border:1px solid var(--line);border-radius:14px;margin:4px 0 12px;overflow:hidden}
+.fxh-t{display:flex;justify-content:space-between;align-items:center;width:100%;background:var(--card-2);border:0;padding:12px 14px;font-weight:600;font-size:14px;color:var(--ink)}
+.fxh-t small{color:var(--mut);font-weight:500;font-size:12.5px}
+.fxh .row{padding:10px 14px}.fxh-b{padding:4px 0 10px}.fxh-b .chip{margin:6px 14px 0}
 .qa-item.main .qi{background:var(--pri);color:var(--pri-ink);border-color:transparent}
 
 /* ---------- seções e cartões ---------- */
@@ -616,6 +629,7 @@ body.auth #app{padding:0;max-width:none}
   .herox{padding:30px 32px 24px}
   .herox .num{font-size:68px}
   .qa{margin:0 0 20px;padding:2px 0 4px;overflow:visible;flex-wrap:wrap}
+  .qa-grid{grid-template-columns:repeat(8,minmax(0,1fr));max-width:760px}
   .home-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:0 24px;align-items:start}
   .home-grid>.col>.sh:first-child{margin-top:4px}
   .carousel{margin:0;padding:6px 0 12px;scroll-padding:0}
@@ -2025,6 +2039,35 @@ function cardsTotalHtml(cs, ym) {
   return `<button class="cardtot" data-act="go" data-tab="cards"><div class="ct-top"><b>Total das faturas</b><small>${cs.length} cartões</small></div><div class="ct-v"><div><span>${lbl(ym === CUR_YM ? 'Fechadas' : 'Faturas', rows[0].fe)}</span><b>${brl(fe)}</b></div><div><span>${lbl(ym === CUR_YM ? 'Abertas' : 'Próximas', rows[0].ab)}</span><b>${brl(ab)}</b></div></div></button>`;
 }
 const qaItem = (ic, l, act, attrs = '', main = false) => `<button class="qa-item${main ? ' main' : ''}" data-act="${act}" ${attrs}><span class="qi">${icon(ic, 22)}</span>${l}</button>`;
+// atalhos da Início: 8 fixos numa grade (sem rolagem lateral), do mais usado para o menos usado
+function qaGridHtml() {
+  const it = [['out', 'Saída', 'add', 'data-m="out"', true], ['in', 'Entrada', 'add', 'data-m="in"'], ['box', 'Guardar', 'add', 'data-m="ap"'],
+    S.cx.length ? ['wallet', 'Retirar', 'cxout', ''] : ['upload', 'Importar', 'impstart', ''],
+    accMulti() ? ['swap', 'Transferir', 'acctr', ''] : ['pie', 'Distribuir', 'distrib', ''],
+    accMulti() ? ['pie', 'Distribuir', 'distrib', ''] : S.cx.length ? ['upload', 'Importar', 'impstart', ''] : ['bank', 'Contas', 'accopen', ''],
+    ['plan', 'Planejar', 'openplan', ''], ['chart', 'Relatórios', 'openrel', '']];
+  return `<div class="qa qa-grid">${it.map(x => qaItem(x[0], x[1], x[2], x[3], !!x[4])).join('')}</div>`;
+}
+function heroAccHtml(I, d, ym) {
+  const tot = Core.round2(sum(I, x => x.bal)), livre = Core.round2(sum(I, x => x.livre)), aPagar = Core.round2(sum(I, x => x.aPagar)), fimTxt = dmy(Core.lastDay(CUR_YM));
+  const pos = I.filter(x => x.bal > 0.004), W = sum(pos, x => x.bal) || 1, col = x => accPal(x.a)[2];
+  return `<section class="herox">
+    <div class="lab"><span>Saldo nas contas</span><button data-act="accopen">Contas</button></div>
+    <div class="num ${tot < -0.004 ? 'neg' : ''}" data-count="${tot}" data-key="saldoacc">${brl(tot)}</div>
+    <p class="sub">Livre para usar até ${fimTxt}: <b>${brl(livre)}</b>${aPagar > 0.004 ? `, depois de pagar ${brl(aPagar)}` : ''}.</p>
+    ${I.length > 1 && pos.length ? `<div class="flowx" role="img" aria-label="Saldo por conta">${pos.map(x => `<i style="width:${(x.bal / W * 100).toFixed(2)}%;background:${col(x)}"></i>`).join('')}</div>` : ''}
+    ${I.length > 1 ? `<div class="accsplit">${I.map(x => `<button data-act="accopen" data-id="${esc(x.a.id)}"><i style="background:${col(x)}"></i><span>${esc(x.a.name)}</span><b class="${x.bal < -0.004 ? 'neg' : ''}">${brlK(x.bal)}</b></button>`).join('')}</div>` : ''}
+    <div class="kpis">
+      <button class="kpi" data-act="hopen" data-k="ent" data-ym="${ym}"><span>Entradas</span><b data-count="${d.ent}" data-key="ent" data-fmt="k">${brlK(d.ent)}</b></button>
+      <button class="kpi" data-act="hopen" data-k="sai" data-ym="${ym}"><span>Saídas</span><b data-count="${d.sai}" data-key="sai" data-fmt="k">${brlK(d.sai)}</b></button>
+      <button class="kpi" data-act="hopen" data-k="sai" data-ym="${ym}"><span>Sobra do mês</span><b class="${d.meta < -0.004 ? 'neg' : ''}" data-count="${d.meta}" data-key="sobra" data-fmt="k">${brlK(d.meta)}</b></button>
+    </div>
+  </section>`;
+}
+function accWarnHtml(I) {
+  const f = I.filter(x => x.min < -0.004); if (!f.length) return '';
+  return `<button class="accwarn home" data-act="accopen" data-id="${esc(f[0].a.id)}">${icon('alert', 16)}<span>${f.map(x => `${esc(x.a.name)}: vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}`).join(' · ')}</span></button>`;
+}
 function viewHome() {
   const ym = UI.ym, d = M.dashboard(ym);
   const fat = M.aPagar(ym), vaSai = M.vaShown(ym), demais = Math.max(0, d.sai - fat - vaSai);
@@ -2036,7 +2079,8 @@ function viewHome() {
   const denom = Math.max(d.ent, d.sai, 1), w = v => (Math.max(0, v) / denom * 100).toFixed(2);
   const csF = M.cardsList(), cardFlow = csF.map(c => { const q = cardPal(c); return ['', csF.length > 1 ? c.name : 'Cartão', M.aPagarForCard(ym, c.id), `background:linear-gradient(90deg,${q[2]},${q[3]})`]; });
   const flow = [...cardFlow, ['fl3', 'VA/VR', vaSai], ['fl1', 'Demais', demais], ['fl4', 'Sobra', Math.max(0, d.meta)]].filter(x => x[2] > 0.004);
-  const hero = `<section class="herox">
+  const accH = ym === CUR_YM && accList().length ? (() => { const mv = accMoves(Core.lastDay(CUR_YM)), cxr = M.cxRows(M.today).rows; return accList().map(a => accInfo(a, mv, cxr)); })() : null;
+  const hero = accH ? heroAccHtml(accH, d, ym) : `<section class="herox">
     <div class="lab"><span>Saldo de ${mesNome}</span><button data-act="hopen" data-k="sai" data-ym="${ym}">Detalhes</button></div>
     <div class="num ${saldo < -0.004 ? 'neg' : ''}" data-count="${saldo}" data-key="saldo">${brl(saldo)}</div>
     <p class="sub">${subTxt}</p>
@@ -2047,7 +2091,7 @@ function viewHome() {
       <button class="kpi" data-act="go" data-tab="pat"><span>Guardado</span><b data-count="${d.guard}" data-key="guard" data-fmt="k">${brlK(d.guard)}</b></button>
     </div>
   </section>`;
-  const qa = `<div class="qa">${qaItem('out', 'Saída', 'add', 'data-m="out"', true)}${qaItem('in', 'Entrada', 'add', 'data-m="in"')}${qaItem('box', 'Guardar', 'add', 'data-m="ap"')}${qaItem('plan', 'Planejar', 'openplan')}${qaItem('pie', 'Distribuir', 'distrib')}${qaItem('upload', 'Importar', 'impstart')}${qaItem('chart', 'Relatórios', 'openrel')}</div>`;
+  const qa = qaGridHtml();
 
   // cartões (juntos: total do mês; separados: um por linha)
   const cs = M.cardsList();
@@ -2073,8 +2117,8 @@ function viewHome() {
   const patSec = sh('Patrimônio', `<button class="link" data-act="go" data-tab="pat">Detalhes</button>`) + `<button class="card" style="width:100%;text-align:left;display:block" data-act="go" data-tab="pat"><div class="mut sm">Caixinhas e investimentos</div><div style="font:400 34px/1.1 var(--serif);margin:4px 0 10px" data-count="${d.total}" data-key="pathome">${brl(d.total)}</div><div class="stackbar" style="margin:0 0 8px">${d.total > 0.004 ? `<i style="width:${(d.cx.tot / d.total * 100).toFixed(2)}%;background:var(--teal)"></i><i style="width:${(d.invT / d.total * 100).toFixed(2)}%;background:var(--tan)"></i>` : ''}</div><div class="mut sm" style="display:flex;justify-content:space-between"><span>Caixinhas ${brl(d.cx.tot)}</span><span>Investimentos ${brl(d.invT)}</span></div></button>`;
 
   const nm = userName();
-  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + qa + gsCard() + (ym === CUR_YM ? insightCard() : '') +
-    `<div class="home-grid"><div class="col">${catSec}${recentSec}</div><div class="col">${typeof accountsHomeHtml === 'function' ? accountsHomeHtml() : ''}${cardsSec}${vaSec}${recSec}${patSec}</div></div>`;
+  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + (accH ? accWarnHtml(accH) : '') + qa + gsCard() + (ym === CUR_YM ? insightCard() : '') +
+    `<div class="home-grid"><div class="col">${catSec}${recentSec}</div><div class="col">${accH ? '' : accountsHomeHtml()}${cardsSec}${vaSec}${recSec}${patSec}</div></div>`;
 }
 
 // ---------- primeiros passos (Início, só em conta nova até concluir ou ocultar) ----------
@@ -2338,7 +2382,7 @@ function viewCxBody() {
   const summary = fut
     ? `<div class="sumstrip"><div><span>Guardando as sobras</span><b class="acc">${brlK(d.pj.tot)}</b></div><div><span>Sem aportes</span><b>${brlK(semTot)}</b></div><div><span>Juros até lá</span><b class="pos">+${brlK(semTot - d.cx.tot)}</b></div></div><p class="mut sm" style="margin:-4px 2px 12px">Previsão para ${dmy(Core.fromDn(d.target))}/${Core.fromDn(d.target).slice(0, 4)} — hoje as caixinhas somam ${brl(d.cx.tot)}.</p>`
     : `<div class="sumstrip"><div><span>Guardado</span><b>${brlK(d.cx.guardado)}</b></div><div><span>Rendimento</span><b class="pos">+${brlK(d.cx.rend)}</b></div><div><span>Líquido</span><b>${brlK(d.cx.liquido)}</b></div></div>`;
-  const actions = `<div class="row-btns" style="margin:0 0 4px"><button class="btn primary" data-act="add" data-m="ap">${icon('plus', 18)} Guardar</button><button class="btn" data-act="cxout">${icon('out', 18)} Retirar</button><button class="btn" data-act="distrib">${icon('pie', 18)} Distribuir sobra</button></div>`;
+  const actions = `<div class="actbar" style="margin:0 0 6px"><button data-act="add" data-m="ap">${icon('box', 18)}Guardar</button>${S.cx.length ? `<button data-act="cxout">${icon('wallet', 18)}Retirar</button>` : ''}<button data-act="distrib">${icon('pie', 18)}Distribuir sobra</button><button data-act="cxnew">${icon('plus', 18)}Nova caixinha</button></div>`;
   const list = d.cx.rows.map((r, i) => {
     const gl = goalOf(r.c), meta = gl ? gl.v : null, p = meta ? r.atual / meta : r.pct, k = [2, 3, 1, 4, 5, 6, 7, 8][i % 8];
     return `<button class="cx" data-act="cxedit" data-id="${r.c.id}">
@@ -4095,7 +4139,7 @@ function viewAccBody() {
       ${x.cxs.length ? `<div class="kv"><span>Caixinhas neste banco</span><b>${brl(x.cxT)}</b></div><p class="mut sm" style="margin:-4px 0 6px">${x.cxs.map(r => esc(r.c.name)).join(' · ')}</p>` : ''}
       ${warn}
       ${x.semDia.length ? `<div class="accnote">${icon('calendar', 15)}<span>Sem dia de vencimento: ${x.semDia.map(f => `<button class="link" data-act="fixopts" data-f="${f.id}">${esc(f.name)}</button>`).join(', ')}. Sem o dia, o app não sabe quando o valor sai da conta.</span></div>` : ''}
-      <div class="row-btns" style="margin-top:10px"><button class="btn" data-act="accmoves" data-id="${esc(a.id)}">Movimentos</button><button class="btn" data-act="accadjust" data-id="${esc(a.id)}">Acertar saldo</button>${L.length > 1 ? `<button class="btn" data-act="acctr">Transferir</button>` : ''}${x.min < -0.004 && S.cx.length ? `<button class="btn" data-act="cxout">Retirar</button>` : ''}</div>
+      <div class="actbar"><button data-act="accmoves" data-id="${esc(a.id)}">${icon('list', 18)}Movimentos</button>${L.length > 1 ? `<button data-act="acctr">${icon('swap', 18)}Transferir</button>` : ''}${S.cx.length ? `<button data-act="cxout">${icon('wallet', 18)}Retirar</button>` : ''}<button data-act="accadjust" data-id="${esc(a.id)}">${icon('check', 18)}Acertar</button></div>
     </section>`;
   }).join('');
   return strip + cards + `<div class="row-btns" style="margin-top:4px"><button class="btn" data-act="accnew">${icon('plus', 18)} Nova conta</button></div>` + (anyCx ? '' : `<p class="mut sm pad" style="margin-top:10px">Dica: ao editar uma caixinha, escolha em qual banco ela fica. Ela passa a somar no total do banco, e o que você guarda ou retira sai e volta para essa conta.</p>`);
@@ -4609,11 +4653,11 @@ function viewMore() {
 function subHead(t) { return `<div class="subh"><button class="backbtn" data-act="subback" aria-label="Voltar">${icon('left', 20)}</button><h1>${t}</h1></div>`; }
 function viewFixos() {
   const fx = S.fixed.map(f => {
-    const v = M.fv(f, CUR_YM), tags = [f.kind === 'in' ? 'entrada' : 'saída', f.inFatura ? 'no cartão' : null, f.cardDay ? `dia ${f.cardDay}` : null].filter(Boolean).join(' · ');
+    const v = M.fv(f, CUR_YM), tags = [f.kind === 'in' ? 'entrada' : 'saída', f.inFatura ? `no cartão${f.cardDay ? ` · dia ${f.cardDay}` : ''}` : (f.day ? `dia ${f.day}` : (f.kind === 'out' ? 'sem dia' : null)), !f.inFatura && accMulti() && !(f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || '')) ? accName(f.acc) : null].filter(Boolean).join(' · ');
     return `<button class="tx" data-act="fixdetail" data-id="${f.id}">${cbadge(f.name)}<span class="tm"><b>${esc(f.name)}</b><small>${tags}</small></span><span class="tv"><b class="${f.kind === 'in' ? 'cr' : ''}">${brl(v).replace('−', '')}</b><small>${ymLabel(CUR_YM)}</small></span></button>`;
   }).join('');
   const en = hasVA() ? sh('VA/VR por mês') + `<div class="list">${S.env.map(e => `<button class="tx" data-act="envedit" data-id="${e.id}">${cbadge('VA/VR')}<span class="tm"><b>${esc(e.name)}</b><small>sem limite por categoria</small></span><span class="tv"><b>${brl(e.monthly)}</b></span></button>`).join('')}</div>` : '';
-  return subHead('Itens fixos') + `<p class="mut sm" style="margin:-6px 2px 14px">Entram sozinhos todo mês. Toque em um item para ver ou mudar a agenda de valores.</p>` +
+  return subHead('Itens fixos') + `<p class="mut sm" style="margin:-6px 2px 14px">Entram sozinhos todo mês. Toque em um item para mudar o valor, o dia ou de onde ele sai.</p>` +
     (S.fixed.length ? `<div class="list">${fx}</div>` : `<section class="card">${empty('Nenhum item fixo', 'Cadastre salário, aluguel, assinaturas e outras contas que se repetem.', 'repeat')}</section>`) +
     `<button class="btn primary" style="width:100%;margin:4px 0 8px" data-act="fixnew">${icon('plus', 18)} Novo item fixo</button>` + en;
 }
@@ -5042,19 +5086,65 @@ function monthEdit(fid, ym, back) {
     }
   });
 }
-ACT.monthedit = el => monthEdit(el.dataset.f, el.dataset.ym, el.dataset.back ? () => monthDetail(el.dataset.ym) : null);
+ACT.monthedit = el => fixForm(el.dataset.f, el.dataset.ym, el.dataset.back ? () => monthDetail(el.dataset.ym) : null);
+// Editor único do item fixo: valor (deste mês em diante ou só neste mês), tipo, onde sai, dia e conta, com o histórico recolhido
+function fixForm(fid, ym = CUR_YM, back = null) {
+  const f = S.fixed.find(x => x.id === fid); if (!f) return;
+  const vaItem = f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || ''), cur = Core.schedAt(f.sched, ym), isPct = typeof cur === 'string';
+  const v0 = isPct ? cur : moneyFmt(+cur || 0), self = () => fixForm(fid, ym, back);
+  openForm({
+    title: f.name, back,
+    v: { name: f.name, val: v0, scope: 'prox', kind: f.kind, inFatura: f.inFatura ? '1' : '0', day: f.day || '', cardDay: f.cardDay || '', cardId: f.cardId || (S.cards && S.cards[0] ? S.cards[0].id : ''), acc: f.acc || '', hist: '0' },
+    fields: v => {
+      const hist = f.sched.slice().reverse().map((p, j) => { const i = f.sched.length - 1 - j; return `<button type="button" class="row" data-act="ptedit" data-f="${fid}" data-i="${i}" data-ym="${ym}"><span class="r-main"><b>A partir de ${ymLabel(p[0])}</b></span><span class="r-amt">${typeof p[1] === 'string' ? esc(p[1]) : brl(p[1]).replace('−', '')}</span></button>`; }).join('');
+      return [
+        { t: 'text', k: 'name', label: 'Nome' },
+        isPct ? { t: 'text', k: 'val', label: `Valor em ${ymLabel(ym)}`, ph: 'Ex.: 10% ou 380,70' } : { t: 'money', k: 'val', label: `Valor em ${ymLabel(ym)}`, nofocus: true },
+        { t: 'seg', k: 'scope', label: 'Se mudar o valor, vale', opts: [['prox', 'Deste mês em diante'], ['mes', 'Só neste mês']] },
+        { t: 'seg', k: 'kind', label: 'Tipo', opts: [['out', 'Saída'], ['in', 'Entrada']] },
+        v.kind === 'out' ? { t: 'seg', k: 'inFatura', label: 'Onde sai', opts: [['0', 'Da conta'], ['1', 'No cartão']] } : null,
+        v.inFatura === '1' && v.kind === 'out' ? { t: 'num', k: 'cardDay', label: 'Dia da cobrança no cartão (opcional)', ph: 'Ex.: 8' } : { t: 'num', k: 'day', label: v.kind === 'in' ? 'Dia em que cai na conta' : 'Dia do vencimento', ph: 'Ex.: 25' },
+        v.inFatura !== '1' && v.kind === 'out' && !String(v.day || '').trim() ? { t: 'note', html: 'Sem o dia, o app considera o dia 1º: numa conta cadastrada depois disso, o valor não aparece como “a pagar”.' } : null,
+        v.inFatura === '1' && v.kind === 'out' && S.cards && S.cards.length > 1 ? { t: 'seg', k: 'cardId', label: 'Cartão', opts: S.cards.map(c => [c.id, c.name]) } : null,
+        (v.inFatura !== '1' || v.kind === 'in') && !vaItem && accMulti() ? accField('acc', v.kind === 'in' ? 'Cai na conta' : 'Sai da conta', v) : null,
+        { t: 'html', html: `<div class="fxh"><button type="button" class="fxh-t" data-act="fset" data-k="hist" data-v="${v.hist === '1' ? '0' : '1'}"><span>Histórico de valores</span><small>${f.sched.length} ${f.sched.length === 1 ? 'valor' : 'valores'} ${v.hist === '1' ? '▴' : '▾'}</small></button>${v.hist === '1' ? `<div class="fxh-b">${hist}<button type="button" class="chip sm" data-act="ptnew" data-f="${fid}" data-ym="${ym}">${icon('calendar', 14)} Agendar mudança futura</button></div>` : ''}</div>` }
+      ];
+    },
+    del: () => { commit(S => { S.fixed = S.fixed.filter(x => x.id !== fid); }, 'Item removido'); },
+    save: v => {
+      if (!String(v.name || '').trim()) return 'Dê um nome ao item.';
+      const dd = String((v.inFatura === '1' && v.kind === 'out' ? v.cardDay : v.day) || '').trim(); if (dd && !(+dd >= 1 && +dd <= 31)) return 'O dia precisa ser de 1 a 31.';
+      let val = null;
+      if (String(v.val) !== v0) {
+        const raw = String(v.val).trim();
+        if (raw.endsWith('%')) { const p = Core.calc(raw.slice(0, -1)); if (isNaN(p) || p < 0) return 'Percentual inválido.'; val = p + '%'; }
+        else { const n = Core.calc(raw || '0'); if (isNaN(n) || n < 0) return 'Valor inválido.'; val = Core.round2(n); }
+      }
+      commit(S => {
+        const g = S.fixed.find(x => x.id === fid); g.name = v.name.trim(); g.kind = v.kind;
+        if (val !== null) g.sched = Core.schedSet(g.sched, ym, val, v.scope === 'mes' ? 'mes' : 'prox');
+        const card = v.kind === 'out' && v.inFatura === '1';
+        if (card) { g.inFatura = true; const d = parseInt(v.cardDay); if (d >= 1 && d <= 31) g.cardDay = d; else delete g.cardDay; if (v.cardId) g.cardId = v.cardId; else delete g.cardId; }
+        else { delete g.inFatura; delete g.cardId; const d = parseInt(v.day); if (d >= 1 && d <= 31) g.day = d; else delete g.day; }
+        if (accMulti()) { if (!card && !vaItem && accById(v.acc)) g.acc = v.acc; else delete g.acc; }
+      }, 'Item atualizado');
+      if (back) back();
+    }
+  });
+}
 
-function fixedDetail(fid) {
+function fixedDetail(fid) { fixForm(fid); }
+function fixedDetailOld(fid) {
   const f = S.fixed.find(x => x.id === fid); if (!f) return;
   const pts = f.sched.map((p, i) => `<button class="row" data-act="ptedit" data-f="${fid}" data-i="${i}"><span class="r-main"><b>A partir de ${ymLabel(p[0])}</b></span><span class="r-amt">${typeof p[1] === 'string' ? esc(p[1]) : brl(p[1]).replace('−', '')}</span></button>`).join('');
   openInfo(f.name, `<p class="mut">Agenda de valores: cada linha vale até a próxima mudança.</p>${pts || '<p class="mut">Sem valores definidos.</p>'}<div class="row-btns"><button class="btn" data-act="ptnew" data-f="${fid}">Adicionar mudança</button><button class="btn" data-act="fixopts" data-f="${fid}">Opções do item</button></div>`, null);
 }
-ACT.fixdetail = el => fixedDetail(el.dataset.id);
-ACT.ptnew = el => ptForm(el.dataset.f, -1);
-ACT.ptedit = el => ptForm(el.dataset.f, +el.dataset.i);
-function ptForm(fid, i) {
-  const f = S.fixed.find(x => x.id === fid); const p = i >= 0 ? f.sched[i] : [CUR_YM, ''];
-  const back = () => fixedDetail(fid);
+ACT.fixdetail = el => fixForm(el.dataset.id);
+ACT.ptnew = el => ptForm(el.dataset.f, -1, el.dataset.ym);
+ACT.ptedit = el => ptForm(el.dataset.f, +el.dataset.i, el.dataset.ym);
+function ptForm(fid, i, ym) {
+  const f = S.fixed.find(x => x.id === fid); const p = i >= 0 ? f.sched[i] : [Core.addM(ym || CUR_YM, 1), ''];
+  const back = () => fixForm(fid, ym || CUR_YM);
   openForm({
     title: i >= 0 ? 'Editar mudança' : 'Nova mudança', v: { m: p[0], val: typeof p[1] === 'string' ? p[1] : String(p[1]).replace('.', ',') }, back,
     fields: [{ t: 'month', k: 'm', label: 'A partir de' }, { t: 'text', k: 'val', label: 'Valor', ph: 'Ex.: 4216,80 ou 10%' }],
@@ -5067,7 +5157,8 @@ function ptForm(fid, i) {
     }
   });
 }
-ACT.fixopts = el => {
+ACT.fixopts = el => fixForm(el.dataset.f);
+ACT.fixoptsOld = el => {
   const f = S.fixed.find(x => x.id === el.dataset.f); const fid = f.id, vaItem = f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || ''); // VA/VR nunca mexe em conta
   openForm({
     title: 'Opções do item', back: () => fixedDetail(fid), v: { name: f.name, kind: f.kind, cardDay: f.cardDay || '', day: f.day || '', inFatura: f.inFatura ? '1' : '0', cardId: f.cardId || (S.cards && S.cards[0] ? S.cards[0].id : ''), acc: f.acc || '' },
@@ -5203,6 +5294,7 @@ function cxOutForm(cid) {
     }
   });
 }
+ACT.cxin = el => { const c = S.cx.find(x => x.id === el.dataset.id); if (c) openEntry({ mode: 'ap', cx: c.name }); };
 ACT.cxout = el => cxOutForm(el && el.dataset ? el.dataset.id : null);
 ACT.cxoutall = () => {
   if (!FM) return; const c = S.cx.find(x => x.id === FM.v.cx); if (!c) return;
@@ -5220,7 +5312,7 @@ ACT.cxoutdel = el => { const id = el.dataset.id; askConfirm('Excluir esta retira
 // ----- acertar o saldo da caixinha pelo valor real (banco/corretora) -----
 const cxNow = c => { const r = M.cxRows(M.today).rows.find(x => x.c.id === c.id); return r ? Core.round2(r.atual) : 0; };
 const cxRowOf = c => M.cxRows(M.today).rows.find(x => x.c.id === c.id);
-const cxBalHtml = c => { const r = cxRowOf(c); return `<div class="cxbal"><div><span>Saldo hoje</span><b>${brl(cxNow(c))}</b><small>líquido ${brl(r ? r.liquido : 0)}${c.tax === 'isento' ? ' · isenta' : ''}</small></div><div class="cxbal-a"><button type="button" class="chip sm" data-act="cxout" data-id="${c.id}">${icon('out', 14)} Retirar</button><button type="button" class="chip sm" data-act="cxadj" data-id="${c.id}">${icon('edit', 14)} Acertar saldo</button></div></div>`; };
+const cxBalHtml = c => { const r = cxRowOf(c); return `<div class="cxbal"><div><span>Saldo hoje</span><b>${brl(cxNow(c))}</b><small>líquido ${brl(r ? r.liquido : 0)}${c.tax === 'isento' ? ' · isenta' : ''}</small></div></div><div class="actbar" style="margin:-6px 0 16px"><button type="button" data-act="cxin" data-id="${c.id}">${icon('box', 18)}Guardar</button><button type="button" data-act="cxout" data-id="${c.id}">${icon('wallet', 18)}Retirar</button><button type="button" data-act="cxadj" data-id="${c.id}">${icon('check', 18)}Acertar</button></div>`; };
 ACT.cxadj = el => {
   const c = S.cx.find(x => x.id === el.dataset.id); if (!c) return;
   const cur = cxNow(c);
