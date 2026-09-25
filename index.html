@@ -149,6 +149,18 @@ small.cur{font-size:.72em;font-weight:500;opacity:.7;margin-right:2px}
 .qa-item{flex:none;display:flex;flex-direction:column;align-items:center;gap:7px;width:70px;background:none;border:0;padding:0;scroll-snap-align:start;font-size:12px;font-weight:500;color:var(--ink-2)}
 .qa-item .qi{width:54px;height:54px;border-radius:18px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);box-shadow:var(--shadow-sm);transition:transform .18s var(--ease),background .2s}
 .qa-item:active .qi{transform:scale(.9)}
+.vamini{padding:12px 14px;margin:0 0 14px}
+.vam-r{display:flex;align-items:center;gap:12px}
+.vamini .ring{width:46px;height:46px}.vamini .ring svg{width:46px;height:46px}.vamini .ring b{font-size:10.5px}
+.vam-t{flex:1;min-width:0}.vam-t small{display:block;color:var(--mut);font-size:12px}.vam-t b{display:block;font:400 22px/1.15 var(--serif)}.vam-t span{display:block;color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vam-add{flex:none}.vam-c{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px}.vam-c::-webkit-scrollbar{display:none}.vam-c .chip{flex:none}
+.fold{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid color-mix(in srgb,var(--line) 60%,transparent);margin:0 0 12px;overflow:hidden}
+.fold-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:15px 16px;text-align:left;color:var(--ink)}
+.fold-t{flex:1;min-width:0;font-weight:600;font-size:15px}.fold-t small{display:block;font-weight:500;font-size:12.5px;color:var(--mut);margin-top:2px}
+.fold-w{color:var(--amb);font-weight:600}
+.fold-h>svg{color:var(--mut);transition:transform .25s var(--ease)}.fold.open .fold-h>svg{transform:rotate(90deg)}
+.fold-b{padding:0 6px 6px}
+.fold-b>.card,.fold-b>.insight,.fold-b>button.card{box-shadow:none;border:0;margin:0;background:transparent}
 .qa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 4px;overflow:visible;margin:0 0 18px;padding:2px 0 4px}
 .qa-grid .qa-item{width:auto;min-width:0}
 .accsplit{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:10px}
@@ -2125,6 +2137,8 @@ function viewHome() {
   const cardsSec = sh('Cartões', `<button class="link" data-act="go" data-tab="cards">Ver faturas</button>`) + cardRows + (cs.length > 1 ? cardsTotalHtml(cs, ym) : '');
 
   // VA/VR
+  const vaChips = ((typeof SHARE !== 'undefined' && SHARE) ? [] : ['Combustível', 'Mercado', 'Comida']).filter(c => S.cats.includes(c));
+  const vaMini = hasVA() && M.vaSep ? `<section class="card vamini"><div class="vam-r">${ring(vaP, pct(Math.min(vaP, 9.99), 0))}<div class="vam-t"><small>VA/VR · restante do mês</small><b class="${signCls(vaIn - vaGasto)}">${brl(vaIn - vaGasto)}</b><span>${brl(vaGasto)} de ${brl(vaIn)}${Math.abs(vaPrev) > 0.004 ? ` · acumulado ${brlS(vaPrev)}` : ''}</span></div><button class="chip sm vam-add" data-act="addenv">${icon('plus', 14)}Lançar</button></div>${vaChips.length ? `<div class="vam-c">${vaChips.map(c => `<button class="chip sm" data-act="addenv" data-c="${c}">${icon(catMeta(c).ic || 'plus', 13)}${c}</button>`).join('')}</div>` : ''}</section>` : '';
   const vaSec = hasVA() && M.vaSep ? sh('VA/VR', `<button class="link" data-act="addenv">Lançar gasto</button>`) + `<section class="card"><div class="ringwrap">${ring(vaP, pct(Math.min(vaP, 9.99), 0))}<div style="flex:1;min-width:0"><div class="mut sm">Restante do mês</div><div style="font:400 30px/1.1 var(--serif);margin:2px 0 4px" class="${signCls(vaIn - vaGasto)}">${brl(vaIn - vaGasto)}</div><div class="mut sm">${brl(vaGasto)} gastos de ${brl(vaIn)}${Math.abs(vaPrev) > 0.004 ? ` · acumulado ${brlS(vaPrev)}` : ''}</div></div></div>${((typeof SHARE !== 'undefined' && SHARE) ? [] : ['Combustível', 'Mercado', 'Comida']).filter(c => S.cats.includes(c)).length ? `<div class="chips" style="margin-top:14px">${['Combustível', 'Mercado', 'Comida'].filter(c => S.cats.includes(c)).map(c => `<button class="chip sm" data-act="addenv" data-c="${c}">${icon(catMeta(c).ic || 'plus', 14)}${c}</button>`).join('')}<button class="chip sm ghost" data-act="envreset">Zerar</button></div>` : ''}</section>` : '';
 
   // a receber
@@ -2143,8 +2157,12 @@ function viewHome() {
   const patSec = sh('Patrimônio', `<button class="link" data-act="go" data-tab="pat">Detalhes</button>`) + `<button class="card" style="width:100%;text-align:left;display:block" data-act="go" data-tab="pat"><div class="mut sm">Caixinhas e investimentos</div><div style="font:400 34px/1.1 var(--serif);margin:4px 0 10px" data-count="${d.total}" data-key="pathome">${brl(d.total)}</div><div class="stackbar" style="margin:0 0 8px">${d.total > 0.004 ? `<i style="width:${(d.cx.tot / d.total * 100).toFixed(2)}%;background:var(--teal)"></i><i style="width:${(d.invT / d.total * 100).toFixed(2)}%;background:var(--tan)"></i>` : ''}</div><div class="mut sm" style="display:flex;justify-content:space-between"><span>Caixinhas ${brl(d.cx.tot)}</span><span>Investimentos ${brl(d.invT)}</span></div></button>`;
 
   const nm = userName();
-  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + (accH ? accWarnHtml(accH) : '') + qa + gsCard() + (ym === CUR_YM ? insightCard() : '') +
-    `<div class="home-grid"><div class="col">${catSec}${recentSec}</div><div class="col">${accH ? '' : accountsHomeHtml()}${cardsSec}${vaSec}${recSec}${patSec}</div></div>`;
+  const ins = ym === CUR_YM ? insightSummary() : null;
+  const folds = (ins ? fold('ins', 'Saúde financeira e avisos', ins.sum, insightCard()) : '') +
+    (cats.length ? fold('cat', 'Para onde foi o dinheiro', `${brl(totC)} · mais em ${esc(top[0].c)}`, catSec.replace(/^<div class="sh">[\s\S]*?<\/div>/, '')) : '') +
+    fold('pat', 'Patrimônio', brl(d.total), patSec.replace(/^<div class="sh">[\s\S]*?<\/div>/, ''));
+  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + vaMini + (accH ? accWarnHtml(accH) : '') + qa + gsCard() +
+    `<div class="home-grid"><div class="col">${accH ? '' : accountsHomeHtml()}${cardsSec}${recSec}${recentSec}</div><div class="col">${sh('Resumo do mês')}${folds}</div></div>`;
 }
 
 // ---------- primeiros passos (Início, só em conta nova até concluir ou ocultar) ----------
@@ -3287,6 +3305,17 @@ function homeInsights() {
   return L.sort((x, y) => y.p - x.p);
 }
 const insRow = x => `<button class="ins ${x.tone}" ${x.act}><span class="ii">${icon(x.ic, 16)}</span><span class="it">${x.t}</span>${icon('right', 16)}</button>`;
+// seções dobráveis da Início: o título mostra o resumo; tocar abre o detalhe. Fica lembrado neste aparelho.
+let FOLD = {}; try { FOLD = JSON.parse(localStorage.getItem('cfp:fold') || '{}') || {}; } catch (e) { }
+function fold(k, title, sum, body) {
+  const open = !!FOLD[k];
+  return `<section class="fold${open ? ' open' : ''}"><button class="fold-h" data-act="fold" data-k="${k}" aria-expanded="${open}"><span class="fold-t">${title}<small>${sum}</small></span>${icon('right', 18)}</button>${open ? `<div class="fold-b">${body}</div>` : ''}</section>`;
+}
+ACT.fold = el => { const k = el.dataset.k; FOLD[k] = !FOLD[k]; try { localStorage.setItem('cfp:fold', JSON.stringify(FOLD)); } catch (e) { } render(); };
+function insightSummary() {
+  const L = homeInsights(), H = healthScore(...healthRange());
+  return { sum: `${H.noData ? 'Ainda sem nota' : `Nota ${H.score} · ${H.label}`}${L.length ? ` · <b class="fold-w">${L.length} aviso${L.length > 1 ? 's' : ''}</b>` : ' · tudo em dia'}` };
+}
 function insightCard() {
   const L = homeInsights(), H = healthScore(...healthRange());
   const sc = H.noData ? `<button class="ins-score" data-act="openrep" data-id="saude" style="--sc:var(--mut)"><span class="isc">—</span><span class="ist"><small>Saúde financeira</small><b>Ainda sem nota</b><em>Aparece com o primeiro mês de entradas</em></span></button>` : `<button class="ins-score" data-act="openrep" data-id="saude" style="--sc:${scoreColor(H.score)}"><span class="isc">${H.score}</span><span class="ist"><small>Saúde financeira</small><b>${H.label}</b><em>Ver o que pesa na nota</em></span></button>`;
