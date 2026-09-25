@@ -525,6 +525,10 @@ body.auth #app{padding:0;max-width:none}
 .cxbal{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card-2);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:0 0 16px}
 .cxbal span{display:block;color:var(--mut);font-size:12.5px}
 .cxbal b{font:400 26px/1.1 var(--serif);font-variant-numeric:tabular-nums}
+.cxbal small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.cxbal-a{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.outp{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--mut);padding:3px 0}
+.outtip{background:var(--pos-soft);color:var(--pos);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px;line-height:1.45}
 .obsec{border:1px solid var(--line);border-radius:16px;padding:14px 14px 2px;margin:0 0 12px}
 .obsec>b{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;margin-bottom:12px}
 .obsec>b svg{color:var(--acc)}
@@ -1193,15 +1197,55 @@ const Core = (() => {
 
     // ---- caixinhas ----
     const rate = c => S.selic / 100 * (c.mult || 1);
+    const growth = (c, d0, d1) => Math.pow(1 + rate(c), Math.max(0, bd(d0, d1) - 1) / 252); // d0 e d1 numéricos (pd)
+    // impostos de renda fixa, por dias corridos desde cada aporte
+    const irRate = dias => dias <= 180 ? 0.225 : dias <= 360 ? 0.2 : dias <= 720 ? 0.175 : 0.15;
+    const iofRate = dias => dias >= 30 ? 0 : dias <= 0 ? 1 : IOF[dias - 1] / 100;
+    const apN = a => parseInt(String(a.id || '').replace(/^\D+/, ''), 10) || 0;
+    // Cada aporte é um lote com a própria data, rendimento, IOF e IR. Retirada (ou ajuste para menos) consome
+    // do lote mais antigo para o mais novo, como no banco. Saldo inicial/ajuste não pagam IOF (não são aplicação nova).
+    function cxLots(c, asOf = today) {
+      const aps = S.ap.filter(a => key(a.cx) === key(c.name)).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : apN(a) - apN(b));
+      const lots = [];
+      for (const a of aps) {
+        const d = pd(a.d);
+        if (a.v > 0) { lots.push({ d, p: a.v, ini: !!(a.ini || a.adj), id: a.id }); continue; }
+        let rest = -a.v;
+        while (rest > 0.0001 && lots.length) {
+          const l = lots[0], val = l.p * growth(c, l.d, d);
+          if (val <= rest + 1e-9) { rest -= val; lots.shift(); } else { l.p *= 1 - rest / val; rest = 0; }
+        }
+      }
+      const isento = c.tax === 'isento';
+      return lots.filter(l => l.p > 0.0001).map(l => {
+        const val = l.p * growth(c, l.d, asOf), rend = Math.max(0, val - l.p), dias = Math.max(0, asOf - l.d);
+        const iofR = isento || l.ini || l.d > asOf ? 0 : iofRate(dias), irR = isento ? 0 : irRate(dias);
+        const iof = rend * iofR, ir = (rend - iof) * irR;
+        return { d: l.d, id: l.id, p: l.p, val, rend, dias, iofR, irR, iof, ir, net: val - iof - ir, ini: l.ini, fut: l.d > asOf };
+      });
+    }
+    // Simula uma retirada em "at": mode 'net' = quero receber X; 'gross' = quero tirar X da caixinha
+    function cxSim(c, amt, mode, at = today) {
+      const lots = cxLots(c, at).filter(l => !l.fut && l.val > 0.004);
+      let rest = amt; const parts = [];
+      for (const l of lots) {
+        if (rest <= 0.004) break;
+        const whole = mode === 'net' ? l.net : l.val, f = whole <= rest + 1e-9 ? 1 : rest / whole;
+        rest -= whole * f;
+        parts.push({ d: l.d, dias: l.dias, iofR: l.iofR, irR: l.irR, ini: l.ini, gross: l.val * f, rend: l.rend * f, iof: l.iof * f, ir: l.ir * f, net: l.net * f });
+      }
+      const iof = round2(sum(parts, p => p.iof)), ir = round2(sum(parts, p => p.ir)), short = rest > 0.004 ? round2(rest) : 0;
+      let gross = round2(sum(parts, p => p.gross)), net = round2(gross - iof - ir);
+      if (mode === 'net' && !short) { net = round2(amt); gross = round2(net + iof + ir); }
+      return { parts, gross, iof, ir, net, rend: round2(sum(parts, p => p.rend)), short, availGross: round2(sum(lots, l => l.val)), availNet: round2(sum(lots, l => l.net)) };
+    }
     function cxRows(asOf = today) {
       const rows = S.cx.map(c => {
         const aps = S.ap.filter(a => key(a.cx) === key(c.name));
-        const guardado = sum(aps, a => a.v), r = rate(c);
-        const rend = floor2(sum(aps.filter(a => pd(a.d) <= asOf), a => a.v * (Math.pow(1 + r, Math.max(0, bd(pd(a.d), asOf) - 1) / 252) - 1)));
+        const guardado = sum(aps, a => a.v), r = rate(c), lots = cxLots(c, asOf);
+        const atual = round2(sum(lots, l => l.val)), rend = round2(atual - guardado);
         const st = pd(c.start), dias = st > asOf ? 0 : Math.max(0, bd(st, asOf) - 1);
-        const iofR = dias >= 30 || dias <= 0 ? 0 : IOF[dias - 1] / 100;
-        const dIof = rend * iofR, dIr = (rend - dIof) * 0.225;
-        return { c, rate: r, guardado, rend, atual: guardado + rend, dias, liquido: guardado + rend - dIof - dIr };
+        return { c, rate: r, guardado, rend, atual, dias, liquido: round2(sum(lots, l => l.net)), iof: round2(sum(lots, l => l.iof)), ir: round2(sum(lots, l => l.ir)) };
       });
       const tot = sum(rows, r => r.atual);
       rows.forEach(r => r.pct = tot ? r.atual / tot : 0);
@@ -1298,7 +1342,8 @@ const Core = (() => {
       const ent = entradas(ym), sai = saidasConf(ym), meta = ent - sai + ((S.sobraAdj || {})[ym] || 0); // sobraAdj: ajuste manual fixo da sobra do mês (o resto continua dinâmico)
       const jurosCx = new Set(S.cx.filter(x => x.mode === 'juros').map(x => key(x.name))); // caixinhas cujo aporte vem de um item fixo (não contam como guardado da sobra)
       const gList = S.ap.filter(a => a.d.slice(0, 7) === ym && !a.re && !jurosCx.has(key(a.cx)));
-      const guard = sum(gList, a => a.v), guardSobra = sum(gList.filter(a => !a.ext), a => a.v); // ext = dinheiro de terceiros (não vem da sobra)
+      const cash = a => a.res ? -a.res.net : a.v; // retirada: o que voltou para a conta é o líquido
+      const guard = sum(gList, cash), guardSobra = sum(gList.filter(a => !a.ext), cash); // ext = dinheiro de terceiros (não vem da sobra)
       const saldo = meta < 0 ? meta : Math.max(0, round2(meta - guardSobra));
       const target = ym > curYm ? pd(lastDay(ym)) : today;
       const cx = cxRows(today), pj = project(cx.rows, target);
@@ -1313,7 +1358,7 @@ const Core = (() => {
       return { ent, sai, meta, guard, guardSobra, saldo, dif: meta - guardSobra, patrimonio, principal, juros, invT, env, total: patrimonio, cx, pj, target, proxFatura, nxt, fatura: fatura(ym) };
     }
 
-    return { S, today, curYm, cardsList, cardIdOf, closeDayOf, vaSep, fixedIn, gastosDaCategoria, vaCost, vaShown, vaSpent, aReceber, entradasComReceber, faturaYm, fv, fixedOf, installments, installmentsForCard, cardItems, cardItemsForCard, cardExtra, faturaPlan, faturaPlanForCard, fatura, faturaForCard, advOf, advSum, advSumForCard, aPagar, aPagarForCard, entradas, saidas, sobra, pendCard, saidasConf, sobraConf, envSummary, envFor, envSpent, cxRows, project, invest, distribuir, porCategoria, dashboard, B, budgets };
+    return { S, today, curYm, cardsList, cardIdOf, closeDayOf, vaSep, fixedIn, gastosDaCategoria, vaCost, vaShown, vaSpent, aReceber, entradasComReceber, faturaYm, fv, fixedOf, installments, installmentsForCard, cardItems, cardItemsForCard, cardExtra, faturaPlan, faturaPlanForCard, fatura, faturaForCard, advOf, advSum, advSumForCard, aPagar, aPagarForCard, entradas, saidas, sobra, pendCard, saidasConf, sobraConf, envSummary, envFor, envSpent, cxRows, project, invest, distribuir, porCategoria, dashboard, B, budgets, cxLots, cxSim, irRate, iofRate };
   }
   return { make, calc, schedAt, schedSet, pd, fromDn, ymIdx, idxYm, addM, lastDay, bd, key, round2, floor2 };
 })();
@@ -1943,7 +1988,7 @@ function txRow(t) {
   return `<button class="tx${isCard ? ' tx-card' : ''}"${isCard ? ` style="${cardVars(cardOf(t))}"` : ''} data-act="edtx" data-id="${t.id}">${cbadge(t.cat)}<span class="tm"><b>${esc(t.desc)}</b><small>${sub}</small></span><span class="tv"><b class="${isIn ? 'cr' : ''}">${isIn ? '+' : '−'}${brl(t.v).replace('−', '')}</b>${right}</span></button>`;
 }
 function apRow(a) {
-  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.ini ? ' · saldo inicial' : a.adj ? ' · ajuste de saldo' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
+  return `<button class="tx" data-act="edap" data-id="${a.id}"><span class="cbadge" style="--c:var(--k2)">${icon('box', 19)}</span><span class="tm"><b>${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${esc(a.cx)}</b><small>caixinha${a.res ? ` · líquido ${brl(a.res.net)}${a.res.iof + a.res.ir > 0.004 ? ` · impostos ${brl(a.res.iof + a.res.ir)}` : ''}` : a.ini ? ' · saldo inicial' : a.adj ? ' · ajuste de saldo' : a.re ? ' · realocação' : a.ext ? ' · de terceiros' : ''}</small></span><span class="tv"><b style="color:var(--acc)">${brlS(a.v)}</b></span></button>`;
 }
 
 // ---------- INÍCIO ----------
@@ -2281,14 +2326,14 @@ function viewCxBody() {
   const summary = fut
     ? `<div class="sumstrip"><div><span>Guardando as sobras</span><b class="acc">${brlK(d.pj.tot)}</b></div><div><span>Sem aportes</span><b>${brlK(semTot)}</b></div><div><span>Juros até lá</span><b class="pos">+${brlK(semTot - d.cx.tot)}</b></div></div><p class="mut sm" style="margin:-4px 2px 12px">Previsão para ${dmy(Core.fromDn(d.target))}/${Core.fromDn(d.target).slice(0, 4)} — hoje as caixinhas somam ${brl(d.cx.tot)}.</p>`
     : `<div class="sumstrip"><div><span>Guardado</span><b>${brlK(d.cx.guardado)}</b></div><div><span>Rendimento</span><b class="pos">+${brlK(d.cx.rend)}</b></div><div><span>Líquido</span><b>${brlK(d.cx.liquido)}</b></div></div>`;
-  const actions = `<div class="row-btns" style="margin:0 0 4px"><button class="btn primary" data-act="add" data-m="ap">${icon('plus', 18)} Guardar</button><button class="btn" data-act="distrib">${icon('pie', 18)} Distribuir sobra</button></div>`;
+  const actions = `<div class="row-btns" style="margin:0 0 4px"><button class="btn primary" data-act="add" data-m="ap">${icon('plus', 18)} Guardar</button><button class="btn" data-act="cxout">${icon('out', 18)} Retirar</button><button class="btn" data-act="distrib">${icon('pie', 18)} Distribuir sobra</button></div>`;
   const list = d.cx.rows.map((r, i) => {
     const gl = goalOf(r.c), meta = gl ? gl.v : null, p = meta ? r.atual / meta : r.pct, k = [2, 3, 1, 4, 5, 6, 7, 8][i % 8];
     return `<button class="cx" data-act="cxedit" data-id="${r.c.id}">
       <div class="cx-t"><span class="nm"><span class="cbadge sm" style="--c:var(--k${k})">${icon(meta ? 'target' : 'box', 16)}</span><b>${esc(r.c.name)}</b></span><span class="vl">${brl(r.atual)}</span></div>
       <div class="hb-b"><i style="width:${Math.min(100, p * 100).toFixed(1)}%;background:var(--k${k})"></i></div>
       <div class="cx-b"><span>${meta ? `${pct(Math.min(1, p), 0)} da meta de ${brl(meta)}${gl && gl.d ? ` até ${ymLabel(gl.d.slice(0, 7))}` : ''}` : `${pct(r.pct, 1)} do total`}</span><span class="pos">${brlS(r.rend)}</span></div>
-      <div class="cx-b"><span>${pct(r.rate, 2)} ao ano${r.c.mult !== 1 ? ` · ${Math.round(r.c.mult * 100)}% da Selic` : ''}</span><span>${r.dias} dias úteis</span></div>
+      <div class="cx-b"><span>${pct(r.rate, 2)} ao ano${r.c.mult !== 1 ? ` · ${Math.round(r.c.mult * 100)}% da Selic` : ''}</span><span>líquido ${brl(r.liquido)}</span></div>
       ${fut ? `<div class="cx-b acc"><span>Em ${ymLabel(ym)} com as sobras</span><b>${brl(projRows.get(r.c.id) || 0)}</b></div><div class="cx-b"><span>Sem aportes</span><b>${brl(semRow(r))}</b></div>` : ''}
       ${r.c.note && !meta ? `<div class="cx-n">${esc(r.c.note)}</div>` : ''}
       ${cxForecast(r.c, r.atual)}
@@ -3258,7 +3303,7 @@ function repTotals(a, b) {
   let ent, sai;
   if (fullMonths(a, b)) { ent = sum(yms, m => M.entradas(m)); sai = sum(yms, m => M.saidasConf(m)); }
   else { const rs = repRows(a, b); ent = sum(rs.filter(r => r.kind === 'in'), r => r.v); sai = sum(rs.filter(r => r.kind === 'out' && !(M.vaSep && r.pay === 'vavr')), r => r.v); }
-  const guard = sum(S.ap.filter(x => x.d >= a && x.d <= b && !x.re), x => x.v);
+  const guard = sum(S.ap.filter(x => x.d >= a && x.d <= b && !x.re), apCash);
   return { ent, sai, sob: ent - sai, guard, n: yms.length };
 }
 function repSumBy(rows, kf, lf) {
@@ -3403,7 +3448,7 @@ const REPS = {
   fluxo: {
     t: 'Entradas x saídas', s: 'Fluxo de caixa mês a mês, com a sobra e quanto foi guardado.', ic: 'chart', k: 4,
     run(a, b) {
-      const yms = repMonths(a, b), r = yms.map(m => { const e = M.entradas(m), s = M.saidasConf(m); return { m, e, s, o: e - s, g: sum(S.ap.filter(x => x.d.slice(0, 7) === m && !x.re), x => x.v) }; });
+      const yms = repMonths(a, b), r = yms.map(m => { const e = M.entradas(m), s = M.saidasConf(m); return { m, e, s, o: e - s, g: sum(S.ap.filter(x => x.d.slice(0, 7) === m && !x.re), apCash) }; });
       const T = { e: sum(r, x => x.e), s: sum(r, x => x.s), o: sum(r, x => x.o), g: sum(r, x => x.g) };
       return {
         html: rkpis([['Entradas', brl(T.e), '', 'pos'], ['Saídas', brl(T.s)], ['Sobra', brl(T.o), `<small class="mut">${T.e > 0.004 ? pct(T.o / T.e, 1) + ' das entradas' : ''}</small>`, signCls(T.o)], ['Meses no azul', `${r.filter(x => x.o >= 0).length} de ${r.length}`]]) +
@@ -3918,7 +3963,8 @@ const accBadge = (a, sm) => `<span class="cbadge cardb${sm ? ' sm' : ''}" style=
 const accDot = a => `<i class="accdot" style="${accVars(a)}"></i>`;
 const cxIsJuros = name => S.cx.some(c => c.mode === 'juros' && Core.key(c.name) === Core.key(name || ''));
 // aporte que mexe na conta: realocação, dinheiro de terceiros e a caixinha do item fixo de juros (já sai pelo item fixo) ficam de fora
-const apMovesAcc = a => !a.re && !a.ext && !cxIsJuros(a.cx);
+const apMovesAcc = a => !!a.res || (!a.re && !a.ext && !cxIsJuros(a.cx));
+const apCash = a => a.res ? -a.res.net : a.v; // quanto saiu (+) ou voltou (−) para a conta: na retirada, o líquido
 const txInAcc = (t, id) => t.t === 'tr' ? accIdOf(t.from) === id || accIdOf(t.to) === id : (t.t === 'in' || (t.t === 'out' && t.pay === 'conta')) && accIdOf(t.acc) === id;
 const apInAcc = (a, id) => apMovesAcc(a) && accIdOf(a.acc) === id;
 // campo de escolha de conta nos formulários (seg até 3 contas, chips acima disso)
@@ -3952,7 +3998,7 @@ function accBalances(asOf) {
     else if (t.t === 'in') { if (t.st !== 'rec') add(t.acc, t.d, t.v, t); }
     else if (t.t === 'out' && t.pay === 'conta') add(t.acc, t.d, -t.v, t);
   }
-  for (const a of S.ap) if (apMovesAcc(a)) add(a.acc, a.d, -a.v, a);
+  for (const a of S.ap) if (apMovesAcc(a)) add(a.acc, a.d, -apCash(a), a);
   const paidOn = (ym, key) => { const p = ((S.paid || {})[ym] || {})[key]; return typeof p === 'string' && iso(p) ? p : null; };
   const isVa = f => f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || '');
   // meses entre o saldo mais antigo e asOf, com folga para contas pagas adiantadas ou atrasadas
@@ -4833,7 +4879,7 @@ ACT.edtx = el => {
   if (t.t === 'tr') { openEntry({ id: t.id, mode: 'tr', v: String(t.v).replace('.', ','), from: t.from || '', to: t.to || '', desc: t.desc && t.desc !== 'Transferência' ? t.desc : '', d: t.d }); return; }
   openEntry({ id: t.id, mode: t.t, v: String(t.v).replace('.', ','), cat: t.cat, desc: t.desc, pay: t.pay === 'conta' && t.t === 'in' ? 'cartao' : t.pay, cardId: t.cardId || '', par: t.par || 1, d: t.d, st: t.st || 'ok', adv: (() => { const a = M.advOf(M.faturaYm(t), t.id); return a ? String(a).replace('.', ',') : ''; })(), gen: S.tx.some(x => x.recFor === t.id) ? '1' : '0', acc: t.acc || '', tags: txTags(t).slice() });
 };
-ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0', ini: !!a.ini, adj: !!a.adj }); };
+ACT.edap = el => { const a = S.ap.find(x => x.id === el.dataset.id); if (a && a.res) { cxOutDetail(a); return; } if (a) openEntry({ id: a.id, mode: 'ap', v: String(a.v).replace('.', ','), cx: a.cx, d: a.d, re: a.re ? '1' : a.ext ? '2' : '0', ini: !!a.ini, adj: !!a.adj }); };
 
 // ---------- valores fixos por mês ----------
 function monthEdit(fid, ym, back) {
@@ -4929,12 +4975,13 @@ ACT.envedit = el => envForm(S.env.find(x => x.id === el.dataset.id));
 function cxForm(c, opt = {}) {
   const isNew = !c; const id = c && c.id, g0 = goalOf(c);
   openForm({
-    title: isNew ? (opt.goal ? 'Nova meta' : 'Nova caixinha') : c.name, v: { goalv: g0 ? String(g0.v).replace('.', ',') : '', goald: g0 && g0.d ? g0.d : '', name: c ? c.name : '', pct: c ? String(Math.round(c.pct * 1000) / 10).replace('.', ',') : '0', mode: c ? c.mode : 'none', mult: c ? String(Math.round(c.mult * 100)) : '100', start: c ? c.start : TODAY, note: c ? c.note : '' },
+    title: isNew ? (opt.goal ? 'Nova meta' : 'Nova caixinha') : c.name, v: { goalv: g0 ? String(g0.v).replace('.', ',') : '', goald: g0 && g0.d ? g0.d : '', name: c ? c.name : '', pct: c ? String(Math.round(c.pct * 1000) / 10).replace('.', ',') : '0', mode: c ? c.mode : 'none', mult: c ? String(Math.round(c.mult * 100)) : '100', start: c ? c.start : TODAY, note: c ? c.note : '', tax: c && c.tax === 'isento' ? 'isento' : 'ir' },
     fields: v => [...(isNew ? [] : [{ t: 'html', html: cxBalHtml(c) }]), { t: 'text', k: 'name', label: 'Nome' }, ...(isNew ? [{ t: 'html', html: `<div class="chips" style="margin:-6px 0 12px">${(opt.goal ? ['Viagem', 'Reserva de emergência', 'Carro', 'Casa', 'Casamento', 'Estudos'] : ['Reserva de emergência', 'Viagem', 'Casa', 'Carro', 'Estudos']).map(n => `<button type="button" class="chip sm" data-act="cxname" data-n="${n}">${n}</button>`).join('')}</div>` }] : []),
       { t: 'money', k: 'goalv', label: opt.goal ? 'Quanto quer juntar' : 'Meta (opcional)', nofocus: !opt.goal }, { t: 'date', k: 'goald', label: 'Até quando (opcional)' }, { t: 'num', k: 'mult', label: 'Rendimento (% da Selic)', ph: '100' },
       { t: 'date', k: 'start', label: 'Data de início' },
       { t: 'seg', k: 'mode', label: 'Como recebe a sobra do mês', opts: [['none', 'Não recebe'], ['direct', '% direto'], ['balance', 'Equilibrar'], ...((typeof EXTRA_CX_MODES !== 'undefined') ? EXTRA_CX_MODES : (c && c.mode === 'juros' ? [['juros', 'Valor de item fixo']] : []))] },
       ['direct', 'balance'].includes(v.mode) ? { t: 'num', k: 'pct', label: 'Percentual da sobra', ph: 'Ex.: 30' } : null,
+      { t: 'seg', k: 'tax', label: 'Imposto na retirada', opts: [['ir', 'Com IR (CDB, Tesouro)'], ['isento', 'Isenta (LCI, LCA, Poupança)']] },
       { t: 'text', k: 'note', label: 'Observação', ph: 'Ex.: CDB do banco' },
       { t: 'note', html: '“% direto” aplica o percentual sobre a sobra. “Equilibrar” ajusta as caixinhas para ficarem na proporção definida.' + ((typeof EXTRA_CX_NOTE !== 'undefined') ? EXTRA_CX_NOTE : '') }],
     del: isNew ? null : () => commit(S => { S.cx = S.cx.filter(x => x.id !== id); }, 'Caixinha removida (os aportes continuam no histórico)'),
@@ -4945,15 +4992,88 @@ function cxForm(c, opt = {}) {
       const gv = String(v.goalv || '').trim() ? Core.calc(v.goalv) : 0, gd = /^\d{4}-\d{2}-\d{2}$/.test(v.goald || '') ? v.goald : '';
       if (isNaN(gv) || gv < 0) return 'Valor da meta inválido.'; if (gd && !(gv > 0)) return 'Informe o valor da meta.'; if (gd && gd <= TODAY) return 'O prazo da meta precisa ser uma data futura.';
       if (opt.goal && !(gv > 0)) return 'Informe quanto quer juntar.';
-      const o = { name: v.name.trim(), mode: v.mode, mult: m / 100, pct: ['direct', 'balance'].includes(v.mode) ? p / 100 : 0, start: v.start || TODAY, note: v.note || '', goal: gv > 0 ? { v: Core.round2(gv), d: gd } : null };
+      const o = { name: v.name.trim(), mode: v.mode, mult: m / 100, pct: ['direct', 'balance'].includes(v.mode) ? p / 100 : 0, start: v.start || TODAY, note: v.note || '', goal: gv > 0 ? { v: Core.round2(gv), d: gd } : null, tax: v.tax === 'isento' ? 'isento' : undefined };
       commit(S => { if (isNew) S.cx.push(Object.assign({ id: nid('c') }, o)); else Object.assign(S.cx.find(x => x.id === id), o); }, 'Caixinha salva');
     }
   });
 }
 ACT.cxedit = el => cxForm(S.cx.find(x => x.id === el.dataset.id));
+// ----- retirar da caixinha: simula como o banco (lote a lote, mais antigo primeiro, IOF e IR de cada aporte) -----
+const pct1 = x => (Math.round(x * 1000) / 10).toString().replace('.', ',') + '%';
+function cxOutTip(sim, at) {
+  // próxima data em que algum aporte usado fica mais barato de tirar
+  let best = null;
+  for (const p of sim.parts) {
+    const opts = [];
+    if (p.iofR > 0) opts.push({ dn: p.d + 30, save: p.iof, what: 'o IOF zera' });
+    const nx = p.dias <= 180 ? 181 : p.dias <= 360 ? 361 : p.dias <= 720 ? 721 : 0;
+    if (nx && p.irR > 0) { const nr = M.irRate(nx); opts.push({ dn: p.d + nx, save: (p.irR - nr) * (p.rend - p.iof), what: `o IR cai para ${pct1(nr)}` }); }
+    for (const o of opts) if (o.dn > at && o.save > 0.009 && (!best || o.dn < best.dn)) best = o;
+  }
+  if (!best) return '';
+  return `<div class="outtip">${icon('calendar', 14)} Se esperar até ${dmy(Core.fromDn(best.dn))}, ${best.what} e você paga cerca de ${brl(best.save)} a menos.</div>`;
+}
+function cxOutPreview(v) {
+  const c = S.cx.find(x => x.id === v.cx); if (!c) return '<p class="mut">Escolha a caixinha.</p>';
+  const at = /^\d{4}-\d{2}-\d{2}$/.test(v.d || '') ? Core.pd(v.d) : M.today;
+  const all = M.cxSim(c, 1e12, 'gross', at), n = Core.calc(v.val);
+  const head = `<p class="mut sm" style="margin-bottom:8px">Disponível: ${brl(all.availGross)} bruto · ${brl(all.availNet)} líquido${c.tax === 'isento' ? ' (isenta)' : ''}</p>`;
+  if (!String(v.val || '').trim() || isNaN(n) || n <= 0) return head;
+  const sim = M.cxSim(c, n, v.mode, at);
+  if (sim.short) return head + `<p class="err" style="display:block">Passa do disponível em ${brl(sim.short)}.</p>`;
+  const ps = sim.parts, shown = ps.slice(0, 4);
+  const lots = `<p class="fl" style="margin:4px 0 2px">Sai de ${ps.length > 1 ? `${ps.length} aportes, do mais antigo para o mais novo` : '1 aporte'}</p>` + shown.map(p => `<div class="outp"><span>${p.ini ? 'Saldo inicial' : 'Aporte'} de ${dmy(Core.fromDn(p.d))}/${Core.fromDn(p.d).slice(2, 4)} · ${p.dias} dia${p.dias === 1 ? '' : 's'}</span><span>${p.iofR > 0 ? `IOF ${pct1(p.iofR)} · ` : ''}${p.irR > 0 ? `IR ${pct1(p.irR)}` : 'sem IR'}</span></div>`).join('') + (ps.length > 4 ? `<div class="outp"><span>e mais ${ps.length - 4} aportes</span></div>` : '');
+  return head + lots + `<div class="kv" style="margin-top:8px"><span>Sai da caixinha (bruto)</span><b>${brl(sim.gross)}</b></div><div class="kv"><span>Rendimento incluído</span><span>${brl(sim.rend)}</span></div><div class="kv"><span>− IOF</span><span class="${sim.iof > 0.004 ? 'neg' : ''}">${brl(sim.iof)}</span></div><div class="kv"><span>− IR</span><span class="${sim.ir > 0.004 ? 'neg' : ''}">${brl(sim.ir)}</span></div><div class="kv tot"><span>Cai na conta (líquido)</span><b class="pos">${brl(sim.net)}</b></div>` + (at === M.today ? cxOutTip(sim, at) : '');
+}
+function cxOutForm(cid) {
+  const c0 = S.cx.find(x => x.id === cid) || null, L = accList();
+  const v = { cx: c0 ? c0.id : (S.cx.find(c => c.mode !== 'juros') || S.cx[0] || {}).id || '', mode: 'net', val: '', d: TODAY, acc: (c0 && c0.acc) || (L[0] ? L[0].id : '') };
+  openForm({
+    title: c0 ? `Retirar de ${c0.name}` : 'Retirar da caixinha', v, back: c0 ? () => cxForm(S.cx.find(x => x.id === c0.id)) : null,
+    fields: v => [
+      c0 ? null : { t: 'chips', k: 'cx', label: 'Caixinha', opts: S.cx.map(c => [c.id, c.name]) },
+      { t: 'seg', k: 'mode', opts: [['net', 'Quero receber (líquido)'], ['gross', 'Quero tirar (bruto)']] },
+      { t: 'money', k: 'val', label: v.mode === 'net' ? 'Quanto quer que caia na conta' : 'Quanto sai da caixinha' },
+      { t: 'html', html: `<button type="button" class="chip sm" style="margin:-6px 0 14px" data-act="cxoutall">Tirar tudo</button>` },
+      L.length ? accField('acc', 'Cai na conta', v) : null,
+      { t: 'date', k: 'd', label: 'Data da retirada' }
+    ],
+    preview: cxOutPreview, saveLabel: 'Retirar',
+    save: v => {
+      const c = S.cx.find(x => x.id === v.cx); if (!c) return 'Escolha a caixinha.';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v.d || '') || v.d > TODAY) return 'A data não pode ser futura.';
+      const n = Core.calc(v.val); if (isNaN(n) || n <= 0) return 'Digite o valor.';
+      const sim = M.cxSim(c, n, v.mode, Core.pd(v.d)); if (sim.short) return `Disponível: ${brl(v.mode === 'net' ? sim.availNet : sim.availGross)}${v.mode === 'net' ? ' líquido' : ''}.`;
+      const dest = L.length ? accIdOf(v.acc) : '', home = c.acc && accById(c.acc) ? c.acc : '';
+      commit(S => {
+        const a = { id: nid('a'), d: v.d, cx: c.name, v: -sim.gross, res: { net: sim.net, iof: sim.iof, ir: sim.ir, rend: sim.rend } };
+        // caixinha de outro banco: o dinheiro cai lá e é transferido para a conta escolhida (igual ao banco)
+        if (home && dest && home !== dest) { a.acc = home; const t = { id: nid('t'), d: v.d, t: 'tr', v: sim.net, from: home, to: dest, desc: `Resgate de ${c.name}` }; a.trId = t.id; S.tx.push(t); }
+        else if (dest) a.acc = dest;
+        S.ap.push(a);
+      }, `Retirado ${brl(sim.net)} de ${c.name}`);
+      return true;
+    }
+  });
+}
+ACT.cxout = el => cxOutForm(el && el.dataset ? el.dataset.id : null);
+ACT.cxoutall = () => {
+  if (!FM) return; const c = S.cx.find(x => x.id === FM.v.cx); if (!c) return;
+  const at = /^\d{4}-\d{2}-\d{2}$/.test(FM.v.d || '') ? Core.pd(FM.v.d) : M.today, all = M.cxSim(c, 1e12, 'gross', at);
+  FM.v.val = moneyFmt(FM.v.mode === 'net' ? all.availNet : all.availGross); drawSheet();
+};
+function cxOutDetail(a) {
+  const r = a.res, tr = a.trId && S.tx.find(t => t.id === a.trId);
+  openInfo(`Resgate de ${a.cx}`, `<p class="mut" style="margin-bottom:10px">${dmy(a.d)}/${a.d.slice(0, 4)}${a.acc ? ` · caiu em ${esc(accName(a.acc))}` : ''}${tr ? ` e foi para ${esc(accName(tr.to))}` : ''}</p>
+    <div class="kv"><span>Saiu da caixinha (bruto)</span><b>${brl(-a.v)}</b></div><div class="kv"><span>Rendimento incluído</span><span>${brl(r.rend || 0)}</span></div>
+    <div class="kv"><span>IOF</span><span>${brl(r.iof)}</span></div><div class="kv"><span>IR retido</span><span>${brl(r.ir)}</span></div><div class="kv tot"><span>Líquido</span><b class="pos">${brl(r.net)}</b></div>
+    <div class="sheet-foot"><button class="btn danger" data-act="cxoutdel" data-id="${a.id}">Excluir</button><button class="btn primary" data-act="fclose">Fechar</button></div>`);
+}
+ACT.cxoutdel = el => { const id = el.dataset.id; askConfirm('Excluir esta retirada? O valor volta para a caixinha.', 'Excluir', () => commit(S => { const a = S.ap.find(x => x.id === id); S.ap = S.ap.filter(x => x.id !== id); if (a && a.trId) S.tx = S.tx.filter(t => t.id !== a.trId); }, 'Retirada excluída')); };
 // ----- acertar o saldo da caixinha pelo valor real (banco/corretora) -----
 const cxNow = c => { const r = M.cxRows(M.today).rows.find(x => x.c.id === c.id); return r ? Core.round2(r.atual) : 0; };
-const cxBalHtml = c => `<div class="cxbal"><div><span>Saldo hoje</span><b>${brl(cxNow(c))}</b></div><button type="button" class="chip sm" data-act="cxadj" data-id="${c.id}">${icon('edit', 14)} Acertar saldo</button></div>`;
+const cxRowOf = c => M.cxRows(M.today).rows.find(x => x.c.id === c.id);
+const cxBalHtml = c => { const r = cxRowOf(c); return `<div class="cxbal"><div><span>Saldo hoje</span><b>${brl(cxNow(c))}</b><small>líquido ${brl(r ? r.liquido : 0)}${c.tax === 'isento' ? ' · isenta' : ''}</small></div><div class="cxbal-a"><button type="button" class="chip sm" data-act="cxout" data-id="${c.id}">${icon('out', 14)} Retirar</button><button type="button" class="chip sm" data-act="cxadj" data-id="${c.id}">${icon('edit', 14)} Acertar saldo</button></div></div>`; };
 ACT.cxadj = el => {
   const c = S.cx.find(x => x.id === el.dataset.id); if (!c) return;
   const cur = cxNow(c);
