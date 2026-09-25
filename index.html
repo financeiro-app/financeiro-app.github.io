@@ -528,6 +528,16 @@ body.auth #app{padding:0;max-width:none}
 .cxbal small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
 .cxbal-a{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .outp{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--mut);padding:3px 0}
+.accbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--card-3);margin:12px 0 8px}
+.acccard{padding-bottom:14px}.acccard.focus{outline:2px solid var(--acc);outline-offset:2px}
+.ac-h{display:flex;align-items:center;gap:12px}.ac-t{flex:1;min-width:0}.ac-t b{display:block;font-weight:600;font-size:15.5px}.ac-t small{color:var(--mut);font-size:12.5px}
+.acbtn{width:100%;background:none;border:0;color:inherit;text-align:left;font:inherit}
+.acl{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;padding:6px 0 6px 12px;color:var(--ink-2)}
+.acl small{color:var(--mut);margin-right:8px;font-variant-numeric:tabular-nums}.acl>span:last-child{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.accwarn{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;background:var(--neg-soft);color:var(--neg);border:0;border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.45;margin-top:10px}
+.accwarn svg{flex:none;margin-top:1px}
+.acm{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.acm.fut{color:var(--mut)}.acm-d{color:var(--mut);font-variant-numeric:tabular-nums}.acm-l small,.acm-v small{display:block;color:var(--mut);font-size:11.5px}.acm-v{text-align:right;font-variant-numeric:tabular-nums}
 .outtip{background:var(--pos-soft);color:var(--pos);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px;line-height:1.45}
 .obsec{border:1px solid var(--line);border-radius:16px;padding:14px 14px 2px;margin:0 0 12px}
 .obsec>b{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;margin-bottom:12px}
@@ -2315,8 +2325,8 @@ function areaChart(rows) {
 function viewPat() {
   const d = M.dashboard(CUR_YM), tot = d.cx.tot + d.invT;
   const hero = `<div class="pat-hero"><div class="lab">Total hoje</div><div class="v" data-count="${tot}" data-key="pat">${brl(tot)}</div><div class="split"><span><i style="background:var(--teal)"></i>Caixinhas ${brl(d.cx.tot)}</span><span><i style="background:var(--tan)"></i>Investimentos ${brl(d.invT)}</span>${debtTotal() > 0.004 ? `<button class="linkish" data-act="openplan" data-v="dividas"><i style="background:var(--neg)"></i>Dívidas ${brl(debtTotal())}</button>` : ''}</div></div>`;
-  const seg = `<div class="seg wide" style="margin-top:16px"><button class="${UI.pat === 'cx' ? 'on' : ''}" data-act="patseg" data-v="cx">Caixinhas</button><button class="${UI.pat === 'inv' ? 'on' : ''}" data-act="patseg" data-v="inv">Investimentos</button><button class="${UI.pat === 'calc' ? 'on' : ''}" data-act="patseg" data-v="calc">Calculadoras</button></div>`;
-  return topbar('Patrimônio') + `<div class="pat-grid"><div class="col">${hero}${patChart()}</div><div class="col">${seg}${UI.pat === 'inv' ? viewInvBody() : UI.pat === 'calc' ? viewCalcBody() : viewCxBody()}</div></div>`;
+  const seg = `<div class="seg wide" style="margin-top:16px"><button class="${UI.pat === 'acc' ? 'on' : ''}" data-act="patseg" data-v="acc">Contas</button><button class="${UI.pat === 'cx' ? 'on' : ''}" data-act="patseg" data-v="cx">Caixinhas</button><button class="${UI.pat === 'inv' ? 'on' : ''}" data-act="patseg" data-v="inv">Investimentos</button><button class="${UI.pat === 'calc' ? 'on' : ''}" data-act="patseg" data-v="calc">Calculadoras</button></div>`;
+  return topbar('Patrimônio') + `<div class="pat-grid"><div class="col">${hero}${patChart()}</div><div class="col">${seg}${UI.pat === 'acc' ? viewAccBody() : UI.pat === 'inv' ? viewInvBody() : UI.pat === 'calc' ? viewCalcBody() : viewCxBody()}</div></div>`;
 }
 function viewCxBody() {
   const ym = UI.ym, d = M.dashboard(ym), fut = d.target > M.today;
@@ -3589,6 +3599,8 @@ const REPS = {
       const cxs = M.cxRows(Core.pd(asOf)).rows.filter(r => r.atual > 0.004), assets = (S.inv.assets || []).filter(x => (x.qty || 0) > 0);
       const accs = typeof accBalances === 'function' && (S.accounts || []).length ? accBalances(asOf) : [];
       const debts = (S.debts || []).map(d => ({ d, s: debtSaldo(d, asOf) })).filter(x => x.s > 0.004);
+      // retiradas de caixinhas no ano: rendimento e IR retido na fonte (tributação exclusiva)
+      const res = S.ap.filter(x => x.res && x.d >= a && x.d <= asOf), resBy = repSumBy(res.map(x => ({ cx: x.cx, v: x.res.rend || 0, ir: x.res.ir, iof: x.res.iof })), r => r.cx);
       const bens = sum(cxs, r => r.atual) + sum(assets, x => x.qty * (x.price || 0)) + sum(accs, x => Math.max(0, x.bal));
       const dedTab = (l, list, note) => list.length ? `<div class="irg"><div class="irg-h"><b>${l}</b><span>${brl(sum(list, r => r.v))}</span></div>${repSumBy(list, r => r.cat).map(c => `<div class="kv"><span>${esc(c.k)} <small class="mut">${c.n} lançamento${c.n > 1 ? 's' : ''}</small></span><b>${brl(c.v)}</b></div>`).join('')}${note ? `<p class="mut sm">${note}</p>` : ''}</div>` : '';
       const ded = dedTab('Saúde', sa, 'Sem limite de valor. Guarde recibos e notas com o CPF ou CNPJ de quem atendeu.') + dedTab('Educação', ed, 'Tem limite anual por pessoa (R$ 3.561,50 pela regra atual). Só vale ensino regular: escola, faculdade, pós.') + dedTab('Previdência (PGBL)', pv, 'Deduz até 12% da renda tributável, e só para quem também contribui ao INSS.');
@@ -3599,6 +3611,7 @@ const REPS = {
           `<div class="rep-2">${rsec('Rendimentos', ins.length ? rList(ins.map(x => ({ l: x.k, v: x.v, c: catColor(x.k), sub: `${x.n} lançamento${x.n > 1 ? 's' : ''}` }))) + '<p class="mut sm" style="margin-top:8px">Confira com o informe de rendimentos da empresa e dos bancos: é ele que vale na declaração.</p>' : rnone('Nenhuma entrada no ano.'))}` +
           rsec('Despesas dedutíveis', (ded || rnone('Nenhuma categoria marcada como dedutível.')) + `<button class="btn no-print" style="width:100%;margin-top:10px" data-act="ircats">${icon('tag', 16)} Escolher categorias dedutíveis</button>`) + `</div>` +
           rsec(`Bens e direitos em 31/12/${Y}${partial ? ' (valores de hoje)' : ''}`, bensRows.length ? rTable(['Item', 'Tipo', 'Valor'], bensRows) + '<p class="mut sm">Na declaração, ações, FIIs e ETFs entram pelo custo de compra (preço médio da corretora), não pelo valor de mercado mostrado aqui. Aplicações entram pelo saldo informado pelo banco.</p>' : rnone('Nenhum bem registrado.')) +
+          (res.length ? rsec('Retiradas das caixinhas (tributação exclusiva)', rTable(['Caixinha', 'Rendimento', 'IR retido'], resBy.map(g => { const l = res.filter(x => x.cx === g.k); return [esc(g.k), fmtNum(sum(l, x => x.res.rend || 0)), fmtNum(sum(l, x => x.res.ir))]; })) + `<p class="mut sm">Total de IR retido: ${brl(sum(res, x => x.res.ir))}. IOF pago: ${brl(sum(res, x => x.res.iof))}. Na declaração, confira com o informe de rendimentos do banco.</p>`) : '') +
           rsec(`Dívidas em 31/12/${Y}`, debts.length ? rTable(['Dívida', 'Saldo'], debts.map(x => [esc(x.d.name), fmtNum(x.s)])) + '<p class="mut sm">Dívidas acima de R$ 5.000 devem ser declaradas em “Dívidas e ônus reais”.</p>' : rnone('Nenhuma dívida cadastrada no Planejamento.')) +
           `<p class="mut sm" style="margin-top:6px">Este relatório ajuda a organizar a declaração, mas não substitui o programa da Receita Federal nem os informes oficiais.</p>`,
         csv: [['Seção', 'Item', 'Detalhe', 'Valor'], ...ins.map(x => ['Rendimentos', x.k, `${x.n} lançamentos`, x.v]), ...outs.map(r => ['Dedutível · ' + (IR_T.find(t => t[0] === irType(r.cat)) || ['', ''])[1], r.cat, dBR(r.d) + ' · ' + r.desc, r.v]), ...cxs.map(r => ['Bens', r.c.name, 'Caixinha', r.atual]), ...assets.map(x => ['Bens', x.ticker, `${x.qty} unidades (valor de mercado)`, x.qty * (x.price || 0)]), ...accs.map(x => ['Bens', x.a.name, 'Conta bancária', x.bal]), ...debts.map(x => ['Dívidas', x.d.name, '', x.s])]
@@ -3980,41 +3993,56 @@ function accField(k, label, v) {
 // (− na origem, + no destino), itens fixos fora do cartão (dia f.day || 1 do mês, ou a data em S.paid[ym]['f:'+id]),
 // faturas dos cartões (aPagarForCard na conta c.payAcc, na data S.paid[ym]['c:'+id] ou no vencimento) e aportes nas
 // caixinhas (− ; resgate volta). VA/VR nunca mexe em conta.
-function accBalances(asOf) {
-  const L = accList(); if (!L.length) return [];
+// Movimentos de cada conta até "to": Map(id → [{ d, v, label, kind, pend, pym, key }]).
+// pend = conta fixa ou fatura agendada que ainda não foi marcada como paga: no dia do vencimento ela ainda é "a pagar".
+function accMoves(to) {
+  const L = accList(), out = new Map(L.map(a => [a.id, []])); if (!L.length) return out;
   const iso = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
-  if (!iso(asOf)) asOf = TODAY;
+  if (!iso(to)) to = TODAY;
   const MM = M || Core.make(S, TODAY);
-  const bal = new Map(L.map(a => [a.id, +a.init || 0]));
   const since = new Map(L.map(a => [a.id, iso(a.since) ? a.since : TODAY]));
   const idn = x => parseInt(String((x && x.id) || '').replace(/^\D+/, ''), 10);
-  const add = (acc, d, v, item) => {
-    if (!iso(d) || d > asOf || !v) return;
+  const add = (acc, d, v, item, label, kind, extra) => {
+    if (!iso(d) || d > to || Math.abs(v) < 0.005) return;
     const id = accIdOf(acc), s = since.get(id), a = accById(id);
-    if (d > s || (d === s && item && a.sinceUid != null && idn(item) >= a.sinceUid)) bal.set(id, bal.get(id) + v);
+    if (d > s || (d === s && item && a.sinceUid != null && idn(item) >= a.sinceUid)) out.get(id).push(Object.assign({ d, v, label, kind }, extra || {}));
   };
   for (const t of S.tx) {
-    if (t.t === 'tr') { add(t.from, t.d, -t.v, t); add(t.to, t.d, t.v, t); }
-    else if (t.t === 'in') { if (t.st !== 'rec') add(t.acc, t.d, t.v, t); }
-    else if (t.t === 'out' && t.pay === 'conta') add(t.acc, t.d, -t.v, t);
+    if (t.t === 'tr') { add(t.from, t.d, -t.v, t, t.desc && t.desc !== 'Transferência' ? t.desc : `Para ${accName(t.to)}`, 'tr'); add(t.to, t.d, t.v, t, t.desc && t.desc !== 'Transferência' ? t.desc : `De ${accName(t.from)}`, 'tr'); }
+    else if (t.t === 'in') { if (t.st !== 'rec') add(t.acc, t.d, t.v, t, t.desc || t.cat, 'in'); }
+    else if (t.t === 'out' && t.pay === 'conta') add(t.acc, t.d, -t.v, t, t.desc || t.cat, 'out');
   }
-  for (const a of S.ap) if (apMovesAcc(a)) add(a.acc, a.d, -apCash(a), a);
+  for (const a of S.ap) if (apMovesAcc(a)) add(a.acc, a.d, -apCash(a), a, `${a.v < 0 ? 'Resgate de' : 'Guardado em'} ${a.cx}`, 'ap');
   const paidOn = (ym, key) => { const p = ((S.paid || {})[ym] || {})[key]; return typeof p === 'string' && iso(p) ? p : null; };
   const isVa = f => f.id === 'f_vavr' || /^va\/vr$/i.test(f.name || '');
-  // meses entre o saldo mais antigo e asOf, com folga para contas pagas adiantadas ou atrasadas
+  // meses entre o saldo mais antigo e "to", com folga para contas pagas adiantadas ou atrasadas
   const first = [...since.values()].sort()[0];
-  for (let ym = Core.addM(first.slice(0, 7), -2), end = Core.addM(asOf.slice(0, 7), 2); ym <= end; ym = Core.addM(ym, 1)) {
+  for (let ym = Core.addM(first.slice(0, 7), -2), end = Core.addM(to.slice(0, 7), 2); ym <= end; ym = Core.addM(ym, 1)) {
     for (const f of S.fixed) {
       if (f.inFatura || isVa(f)) continue;
       const v = MM.fv(f, ym); if (Math.abs(v) < 0.005) continue;
-      add(f.acc, paidOn(ym, 'f:' + f.id) || `${ym}-${pad(Math.min(+Core.lastDay(ym).slice(8), Math.max(1, +f.day || 1)))}`, f.kind === 'in' ? v : -v);
+      const key = 'f:' + f.id, p = paidOn(ym, key);
+      add(f.acc, p || `${ym}-${pad(Math.min(+Core.lastDay(ym).slice(8), Math.max(1, +f.day || 1)))}`, f.kind === 'in' ? v : -v, null, f.name, f.kind === 'in' ? 'fixin' : 'fixo', { pend: !p && f.kind !== 'in', pym: ym, key });
     }
     for (const c of MM.cardsList()) {
       const v = MM.aPagarForCard(ym, c.id); if (Math.abs(v) < 0.005) continue;
-      add(c.payAcc, paidOn(ym, 'c:' + c.id) || cardDueEff(c, ym), -v);
+      const key = 'c:' + c.id, p = paidOn(ym, key);
+      add(c.payAcc, p || cardDueEff(c, ym), -v, null, `Fatura ${c.name}`, 'fatura', { pend: !p, pym: ym, key });
     }
   }
-  return L.map(a => ({ a, bal: Core.round2(bal.get(a.id)) }));
+  // acertos de saldo ficam registrados como uma linha própria
+  for (const a of L) for (const x of (a.adjs || [])) if (iso(x.d) && x.d <= to && x.d >= since.get(a.id)) out.get(a.id).push({ d: x.d, v: x.v, label: 'Ajuste de saldo', kind: 'adj' });
+  for (const l of out.values()) l.sort((x, y) => x.d < y.d ? -1 : x.d > y.d ? 1 : 0);
+  return out;
+}
+// já aconteceu em "asOf"? No dia de hoje, conta agendada ainda não paga continua "a pagar".
+const accDone = (m, asOf) => m.d < asOf || (m.d === asOf && !(asOf === TODAY && m.pend));
+// Saldo de cada conta em asOf (YYYY-MM-DD) → [{ a, bal }]
+function accBalances(asOf) {
+  const L = accList(); if (!L.length) return [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf || '')) asOf = TODAY;
+  const mv = accMoves(asOf);
+  return L.map(a => ({ a, bal: Core.round2((+a.init || 0) + sum(mv.get(a.id).filter(m => accDone(m, asOf)), m => m.v)) }));
 }
 const accBal = (a, asOf) => { const r = accBalances(asOf).find(x => x.a === a); return r ? r.bal : 0; };
 
@@ -4023,9 +4051,59 @@ function accountsHomeHtml() {
   const L = accList(); if (!L.length) return '';
   const now = accBalances(TODAY), end = accBalances(Core.lastDay(CUR_YM));
   const rows = now.map((x, i) => `<button class="accrow" data-act="accopen" data-id="${esc(x.a.id)}">${accBadge(x.a, true)}<b class="an">${esc(x.a.name)}</b><b class="ab ${x.bal < -0.004 ? 'neg' : ''}">${brl(x.bal)}</b><small>previsto no fim do mês: <span class="${end[i].bal < -0.004 ? 'neg' : ''}">${brl(end[i].bal)}</span></small></button>`).join('');
-  return sh('Suas contas', `<span class="mut sm">${brl(sum(now, x => x.bal))}</span>`) + `<section class="card accs">${rows}</section>`;
+  const mv = accMoves(Core.lastDay(CUR_YM)), cxr = M.cxRows(M.today).rows, falta = L.map(a => accInfo(a, mv, cxr)).filter(x => x.min < -0.004);
+  const warn = falta.length ? `<button class="accwarn" data-act="accopen" data-id="${esc(falta[0].a.id)}">${icon('alert', 16)}<span>${falta.map(x => `${esc(x.a.name)}: vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}`).join(' · ')}</span></button>` : '';
+  return sh('Suas contas', `<span class="mut sm">${brl(sum(now, x => x.bal))}</span>`) + `<section class="card accs">${rows}${warn}</section>`;
 }
-ACT.accopen = el => { UI.tab = 'ext'; UI.prevTab = 'ext'; UI.ext = 'lanc'; UI.sub = null; UI.filter = 'acc:' + el.dataset.id; UI.q = ''; render(); window.scrollTo && window.scrollTo(0, 0); };
+ACT.accopen = el => { UI.tab = 'pat'; UI.pat = 'acc'; UI.sub = null; UI.accFocus = el.dataset.id; render(); window.scrollTo && window.scrollTo(0, 0); };
+ACT.accext = el => { closeSheet(); UI.tab = 'ext'; UI.prevTab = 'ext'; UI.ext = 'lanc'; UI.sub = null; UI.filter = 'acc:' + el.dataset.id; UI.q = ''; render(); window.scrollTo && window.scrollTo(0, 0); };
+
+// ---------- Patrimônio → Contas: saldo de cada conta dividido em livre, a pagar e guardado ----------
+function accInfo(a, mv, cxr) {
+  const list = mv.get(a.id) || [], init = +a.init || 0;
+  const past = list.filter(m => accDone(m, TODAY)), up = list.filter(m => !accDone(m, TODAY));
+  const bal = Core.round2(init + sum(past, m => m.v)), outs = up.filter(m => m.v < 0), ins = up.filter(m => m.v > 0);
+  const aPagar = Core.round2(-sum(outs, m => m.v)), entra = Core.round2(sum(ins, m => m.v));
+  let run = bal, min = bal, minD = TODAY; for (const m of up) { run += m.v; if (run < min - 0.004) { min = run; minD = m.d; } }
+  const cxs = cxr.filter(r => r.c.acc === a.id), cxT = Core.round2(sum(cxs, r => r.atual));
+  return { a, bal, outs, ins, aPagar, entra, livre: Core.round2(bal - aPagar), fim: Core.round2(bal - aPagar + entra), min: Core.round2(min), minD, cxs, cxT, total: Core.round2(bal + cxT) };
+}
+function viewAccBody() {
+  const L = accList();
+  if (!L.length) return `<section class="card" style="margin-top:14px">${empty('Cadastre suas contas', 'Veja quanto tem em cada banco, o que ainda sai até o fim do mês e quanto fica livre para usar.', 'bank')}<div class="row-btns" style="justify-content:center"><button class="btn primary" data-act="accnew">${icon('plus', 18)} Nova conta</button></div></section>`;
+  const end = Core.lastDay(CUR_YM), fimTxt = dmy(end), mv = accMoves(end), cxr = M.cxRows(M.today).rows, I = L.map(a => accInfo(a, mv, cxr));
+  const anyCx = I.some(x => x.cxs.length);
+  const strip = `<div class="sumstrip" style="margin-top:14px"><div><span>Em conta hoje</span><b>${brlK(sum(I, x => x.bal))}</b></div><div><span>Livre até ${fimTxt}</span><b class="${sum(I, x => x.livre) < -0.004 ? 'neg' : 'pos'}">${brlK(sum(I, x => x.livre))}</b></div><div><span>${anyCx ? 'Nas caixinhas dos bancos' : 'Previsto em ' + fimTxt}</span><b>${brlK(anyCx ? sum(I, x => x.cxT) : sum(I, x => x.fim))}</b></div></div>`;
+  const line = (m, i) => `<div class="acl"><span><small>${dmy(m.d)}</small>${esc(m.label)}</span><span>${brl(Math.abs(m.v))}${m.pend && m.key ? `<button class="chip sm" data-act="billpay" data-pym="${m.pym}" data-k="${esc(m.key)}">Paguei</button>` : ''}</span></div>`;
+  const cards = I.map((x, i) => {
+    const a = x.a, open = UI.open['acp' + a.id], k = 'acp' + a.id;
+    const W = Math.max(x.total, x.aPagar, 1), w = v => (Math.max(0, v) / W * 100).toFixed(1);
+    const bar = x.total > 0.004 ? `<div class="accbar"><i style="width:${w(x.livre)}%;background:var(--pos)"></i><i style="width:${w(Math.min(x.aPagar, Math.max(0, x.bal)))}%;background:var(--amb)"></i><i style="width:${w(x.cxT)}%;background:var(--teal)"></i></div><div class="flowleg"><span><i style="background:var(--pos)"></i>Livre</span><span><i style="background:var(--amb)"></i>A pagar</span>${x.cxT > 0.004 ? '<span><i style="background:var(--teal)"></i>Caixinhas</span>' : ''}</div>` : '';
+    const warn = x.min < -0.004 ? `<div class="accwarn">${icon('alert', 16)}<span>Vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}. ${S.cx.length ? 'Retire de uma caixinha' : ''}${S.cx.length && L.length > 1 ? ' ou transfira de outra conta' : L.length > 1 ? 'Transfira de outra conta' : ''}${S.cx.length || L.length > 1 ? '.' : ''}</span></div>` : '';
+    return `<section class="card acccard${UI.accFocus === a.id ? ' focus' : ''}" id="acc-${esc(a.id)}">
+      <div class="ac-h">${accBadge(a)}<div class="ac-t"><b>${esc(a.name)}</b><small>${i === 0 && L.length > 1 ? 'conta padrão' : 'conta'}${x.cxs.length ? ` · total no banco ${brl(x.total)}` : ''}</small></div><button class="link" data-act="accedit" data-id="${esc(a.id)}">Editar</button></div>
+      ${bar}
+      <div class="kv"><span>Saldo hoje</span><b class="${x.bal < -0.004 ? 'neg' : ''}">${brl(x.bal)}</b></div>
+      <button class="kv acbtn" data-act="tog" data-t="${k}" aria-expanded="${open ? 'true' : 'false'}"><span>− A pagar até ${fimTxt} <small class="mut">${x.outs.length} ${x.outs.length === 1 ? 'item' : 'itens'} ${open ? '▴' : '▾'}</small></span><span>${brl(x.aPagar)}</span></button>
+      ${open ? x.outs.map(line).join('') || '<p class="mut sm" style="padding:4px 0 8px">Nada a pagar por esta conta.</p>' : ''}
+      <div class="kv tot"><span>Livre para usar</span><b class="${x.livre < -0.004 ? 'neg' : 'pos'}">${brl(x.livre)}</b></div>
+      ${x.entra > 0.004 ? `<div class="kv"><span>+ Ainda entra até ${fimTxt}</span><span class="pos">${brl(x.entra)}</span></div><div class="kv"><span>Previsto em ${fimTxt}</span><b class="${x.fim < -0.004 ? 'neg' : ''}">${brl(x.fim)}</b></div>` : ''}
+      ${x.cxs.length ? `<div class="kv"><span>Caixinhas neste banco</span><b>${brl(x.cxT)}</b></div><p class="mut sm" style="margin:-4px 0 6px">${x.cxs.map(r => esc(r.c.name)).join(' · ')}</p>` : ''}
+      ${warn}
+      <div class="row-btns" style="margin-top:10px"><button class="btn" data-act="accmoves" data-id="${esc(a.id)}">Movimentos</button><button class="btn" data-act="accadjust" data-id="${esc(a.id)}">Acertar saldo</button>${L.length > 1 ? `<button class="btn" data-act="acctr">Transferir</button>` : ''}${x.min < -0.004 && S.cx.length ? `<button class="btn" data-act="cxout">Retirar</button>` : ''}</div>
+    </section>`;
+  }).join('');
+  return strip + cards + `<div class="row-btns" style="margin-top:4px"><button class="btn" data-act="accnew">${icon('plus', 18)} Nova conta</button></div>` + (anyCx ? '' : `<p class="mut sm pad" style="margin-top:10px">Dica: ao editar uma caixinha, escolha em qual banco ela fica. Ela passa a somar no total do banco, e o que você guarda ou retira sai e volta para essa conta.</p>`);
+}
+// movimentos do mês com o saldo linha a linha (o que ainda vai acontecer aparece como previsto)
+ACT.accmoves = el => {
+  const a = accById(el.dataset.id); if (!a) return;
+  const ym = CUR_YM, from = ym + '-01', to = Core.lastDay(ym), mv = (accMoves(to).get(a.id) || []);
+  let run = Core.round2((+a.init || 0) + sum(mv.filter(m => m.d < from), m => m.v));
+  const rows = mv.filter(m => m.d >= from).sort((x, y) => (accDone(x, TODAY) === accDone(y, TODAY) ? (x.d < y.d ? -1 : x.d > y.d ? 1 : 0) : accDone(x, TODAY) ? -1 : 1));
+  const html = rows.map(m => { run = Core.round2(run + m.v); const fut = !accDone(m, TODAY); return `<div class="acm${fut ? ' fut' : ''}"><span class="acm-d">${dmy(m.d)}</span><span class="acm-l">${esc(m.label)}<small>${fut ? 'previsto' : m.kind === 'adj' ? 'acerto' : ''}</small></span><span class="acm-v ${m.v < 0 ? '' : 'pos'}">${m.v < 0 ? '−' : '+'}${brl(Math.abs(m.v))}<small>${brl(run)}</small></span></div>`; }).join('');
+  openInfo(`${a.name} · ${ymLabel(ym)}`, `<p class="mut sm" style="margin-bottom:10px">Saldo depois de cada movimento. Em cinza, o que ainda vai acontecer.</p>${html || '<p class="mut">Nenhum movimento neste mês.</p>'}<div class="sheet-foot"><button class="btn" data-act="accext" data-id="${esc(a.id)}">Lançamentos da conta</button><button class="btn primary" data-act="fclose">Fechar</button></div>`);
+};
 
 // Ajustes → Contas bancárias
 function accountsSetItem(set) {
@@ -4074,13 +4152,18 @@ function accSave(a, v, adjust) {
   const n = raw ? Core.calc(raw) : 0; if (isNaN(n)) return 'Saldo inválido.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v.since || '')) return 'Escolha a data do saldo.';
   const init = Core.round2(v.neg === '1' ? -Math.abs(n) : n) || 0;
-  const moved = isNew || adjust || init !== Core.round2(+a.init || 0) || v.since !== a.since;
+  const moved = isNew || init !== Core.round2(+a.init || 0) || v.since !== a.since;
+  if (adjust) { // a diferença para o que o app calcula entra como "Ajuste de saldo" (fica no histórico da conta)
+    const diff = Core.round2(init - accBal(a, TODAY));
+    if (Math.abs(diff) > 0.005) commit(S => { const g = S.accounts.find(x => x.id === a.id); g.adjs = (g.adjs || []).concat({ d: TODAY, v: diff }); }, `Saldo de ${name} acertado`);
+    return true;
+  }
   commit(S => {
     if (!Array.isArray(S.accounts)) S.accounts = [];
     let g = isNew ? null : S.accounts.find(x => x.id === a.id);
     if (!g) { g = { id: nid('acc') }; S.accounts.push(g); }
     Object.assign(g, { name, color: v.color, init, since: v.since });
-    if (moved) { if (v.since === TODAY) g.sinceUid = S.uid; else delete g.sinceUid; }
+    if (moved) { if (v.since === TODAY) g.sinceUid = S.uid; else delete g.sinceUid; delete g.adjs; } // saldo de partida novo: acertos antigos deixam de valer
   }, isNew ? `Conta ${name} criada` : adjust ? `Saldo de ${name} acertado` : 'Conta atualizada');
   if (!adjust) ACT.accmanage();
 }
@@ -4684,7 +4767,8 @@ function entryDefaults(over) {
 function openEntry(init) {
   const v = entryDefaults(init);
   if (v.mode === 'ap' && !v.cx && S.cx.length) v.cx = ((typeof DEFAULT_CX !== 'undefined' && S.cx.find(c => c.name === DEFAULT_CX)) || S.cx[0]).name;
-  if (v.mode === 'tr' && !v.id && !accMulti()) v.mode = 'out'; // transferência só com 2 contas ou mais
+  if (v.mode === 'tr' && !v.id && !accMulti()) v.mode = 'out';
+  if (v.mode === 'ap' && !v.id) { const c = S.cx.find(x => x.name === v.cx); if (c && c.acc && accById(c.acc)) v.acc = c.acc; } // transferência só com 2 contas ou mais
   openForm({
     title: v.id ? (v.mode === 'tr' ? 'Editar transferência' : 'Editar lançamento') : 'Novo lançamento', v, fields: entryFields, preview: f => entryPreview(f) + trPreview(f),
     saveLabel: 'Salvar', save: f => saveEntry(f, false), save2: v.id ? null : f => saveEntry(f, true), del: v.id ? () => delEntry(v.id) : null, hook: entryHook
@@ -4698,6 +4782,7 @@ function entryHook(k, why) {
     else if (v.mode === 'ap') { if (!v.cx && S.cx.length) v.cx = S.cx[0].name; }
     v._autocatManual = false; v._autocatHit = false; FM.tagAdding = false;
   }
+  if ((k === 'cx' || k === 'mode') && v.mode === 'ap') { const c = S.cx.find(x => x.name === v.cx); if (c && c.acc && accById(c.acc)) v.acc = c.acc; } // guardar: sai da conta onde a caixinha fica
   if ((k === 'from' || k === 'to') && why === 'set' && v.from === v.to) { // transferência: as duas pontas nunca ficam iguais
     const o = accList().find(a => a.id !== v[k]); if (o) v[k === 'from' ? 'to' : 'from'] = o.id;
   }
@@ -4975,12 +5060,13 @@ ACT.envedit = el => envForm(S.env.find(x => x.id === el.dataset.id));
 function cxForm(c, opt = {}) {
   const isNew = !c; const id = c && c.id, g0 = goalOf(c);
   openForm({
-    title: isNew ? (opt.goal ? 'Nova meta' : 'Nova caixinha') : c.name, v: { goalv: g0 ? String(g0.v).replace('.', ',') : '', goald: g0 && g0.d ? g0.d : '', name: c ? c.name : '', pct: c ? String(Math.round(c.pct * 1000) / 10).replace('.', ',') : '0', mode: c ? c.mode : 'none', mult: c ? String(Math.round(c.mult * 100)) : '100', start: c ? c.start : TODAY, note: c ? c.note : '', tax: c && c.tax === 'isento' ? 'isento' : 'ir' },
+    title: isNew ? (opt.goal ? 'Nova meta' : 'Nova caixinha') : c.name, v: { goalv: g0 ? String(g0.v).replace('.', ',') : '', goald: g0 && g0.d ? g0.d : '', name: c ? c.name : '', pct: c ? String(Math.round(c.pct * 1000) / 10).replace('.', ',') : '0', mode: c ? c.mode : 'none', mult: c ? String(Math.round(c.mult * 100)) : '100', start: c ? c.start : TODAY, note: c ? c.note : '', tax: c && c.tax === 'isento' ? 'isento' : 'ir', acc: c && c.acc && accById(c.acc) ? c.acc : '' },
     fields: v => [...(isNew ? [] : [{ t: 'html', html: cxBalHtml(c) }]), { t: 'text', k: 'name', label: 'Nome' }, ...(isNew ? [{ t: 'html', html: `<div class="chips" style="margin:-6px 0 12px">${(opt.goal ? ['Viagem', 'Reserva de emergência', 'Carro', 'Casa', 'Casamento', 'Estudos'] : ['Reserva de emergência', 'Viagem', 'Casa', 'Carro', 'Estudos']).map(n => `<button type="button" class="chip sm" data-act="cxname" data-n="${n}">${n}</button>`).join('')}</div>` }] : []),
       { t: 'money', k: 'goalv', label: opt.goal ? 'Quanto quer juntar' : 'Meta (opcional)', nofocus: !opt.goal }, { t: 'date', k: 'goald', label: 'Até quando (opcional)' }, { t: 'num', k: 'mult', label: 'Rendimento (% da Selic)', ph: '100' },
       { t: 'date', k: 'start', label: 'Data de início' },
       { t: 'seg', k: 'mode', label: 'Como recebe a sobra do mês', opts: [['none', 'Não recebe'], ['direct', '% direto'], ['balance', 'Equilibrar'], ...((typeof EXTRA_CX_MODES !== 'undefined') ? EXTRA_CX_MODES : (c && c.mode === 'juros' ? [['juros', 'Valor de item fixo']] : []))] },
       ['direct', 'balance'].includes(v.mode) ? { t: 'num', k: 'pct', label: 'Percentual da sobra', ph: 'Ex.: 30' } : null,
+      accList().length ? { t: 'chips', k: 'acc', label: 'Em qual banco ela fica', opts: [['', 'Nenhum']].concat(accList().map(a => [a.id, a.name])) } : null,
       { t: 'seg', k: 'tax', label: 'Imposto na retirada', opts: [['ir', 'Com IR (CDB, Tesouro)'], ['isento', 'Isenta (LCI, LCA, Poupança)']] },
       { t: 'text', k: 'note', label: 'Observação', ph: 'Ex.: CDB do banco' },
       { t: 'note', html: '“% direto” aplica o percentual sobre a sobra. “Equilibrar” ajusta as caixinhas para ficarem na proporção definida.' + ((typeof EXTRA_CX_NOTE !== 'undefined') ? EXTRA_CX_NOTE : '') }],
@@ -4992,7 +5078,7 @@ function cxForm(c, opt = {}) {
       const gv = String(v.goalv || '').trim() ? Core.calc(v.goalv) : 0, gd = /^\d{4}-\d{2}-\d{2}$/.test(v.goald || '') ? v.goald : '';
       if (isNaN(gv) || gv < 0) return 'Valor da meta inválido.'; if (gd && !(gv > 0)) return 'Informe o valor da meta.'; if (gd && gd <= TODAY) return 'O prazo da meta precisa ser uma data futura.';
       if (opt.goal && !(gv > 0)) return 'Informe quanto quer juntar.';
-      const o = { name: v.name.trim(), mode: v.mode, mult: m / 100, pct: ['direct', 'balance'].includes(v.mode) ? p / 100 : 0, start: v.start || TODAY, note: v.note || '', goal: gv > 0 ? { v: Core.round2(gv), d: gd } : null, tax: v.tax === 'isento' ? 'isento' : undefined };
+      const o = { name: v.name.trim(), mode: v.mode, mult: m / 100, pct: ['direct', 'balance'].includes(v.mode) ? p / 100 : 0, start: v.start || TODAY, note: v.note || '', goal: gv > 0 ? { v: Core.round2(gv), d: gd } : null, tax: v.tax === 'isento' ? 'isento' : undefined, acc: v.acc && accById(v.acc) ? v.acc : undefined };
       commit(S => { if (isNew) S.cx.push(Object.assign({ id: nid('c') }, o)); else Object.assign(S.cx.find(x => x.id === id), o); }, 'Caixinha salva');
     }
   });
@@ -5695,7 +5781,7 @@ function obApplyEx() {
   // conta: por último, para o saldo de hoje já considerar o que foi lançado acima
   const bal = String(o.accBal || '').trim() ? obVal(o.accBal) : NaN, a = accList()[0];
   if (!isNaN(bal)) {
-    if (a) { if (Math.abs(bal - (o.bal0 || 0)) > 0.005) { a.init = Core.round2(bal); a.since = TODAY; a.sinceUid = S.uid; } }
+    if (a) { const diff = Core.round2(bal - accBal(a, TODAY)); if (Math.abs(bal - (o.bal0 || 0)) > 0.005 && Math.abs(diff) > 0.005) a.adjs = (a.adjs || []).concat({ d: TODAY, v: diff }); }
     else { S.accounts = [{ id: nid('acc'), name: o.accName.trim() || 'Conta principal', color: ACC_TONES[0], init: Core.round2(bal), since: TODAY }]; S.accounts[0].sinceUid = S.uid; }
   }
   S.obSeen = 1;
