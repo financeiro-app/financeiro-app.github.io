@@ -1,7 +1,7 @@
 // Service worker: deixa o app instalável e abrindo sem internet.
 // Página: rede primeiro (sempre pega a versão nova) e, sem conexão, a última cópia salva.
 // Bibliotecas e fontes (CDN): cache primeiro. Dados (Supabase) e cotações nunca passam pelo cache.
-const CACHE = 'cfp-v3';
+const CACHE = 'cfp-v4';
 const ALERTS = 'cfp-alerts'; // avisos de saldo negativo calculados pelo app (alerts.json) e os já enviados (sent.json)
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
@@ -20,7 +20,9 @@ self.addEventListener('fetch', e => {
   if (/supabase\.co$/.test(url.hostname) || url.hostname === 'brapi.dev') return;
   if (url.pathname.endsWith('.apk')) return; // download do app Android: sempre direto da rede, sem cache
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => {
+    // cache: no-cache = sempre confere com o servidor (ETag). Sem isso o navegador reaproveitava a página por até 10 min
+    // (max-age do GitHub Pages) e abria uma versão antiga do app logo depois de uma atualização.
+    e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(res => {
       if (res.ok && (res.headers.get('content-type') || '').includes('text/html')) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); }
       return res;
     }).catch(() => caches.match('./index.html').then(r => r || caches.match('./'))));

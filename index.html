@@ -2102,6 +2102,31 @@ function heroAccHtml(I, d, ym) {
     </div>
   </section>`;
 }
+// outros meses: saldo de cada conta no fim do mês (passado) ou previsto (futuro), com o que entra e sai no mês
+function accMonthInfo(a, mv, ym) {
+  const from = ym + '-01', to = Core.lastDay(ym), list = mv.get(a.id) || [];
+  const inM = list.filter(m => m.d >= from && m.d <= to), b0 = Core.round2((+a.init || 0) + sum(list.filter(m => m.d < from), m => m.v));
+  const ent = Core.round2(sum(inM.filter(m => m.v > 0), m => m.v)), sai = Core.round2(-sum(inM.filter(m => m.v < 0), m => m.v));
+  let run = b0, min = b0, minD = from; for (const m of inM) { run += m.v; if (run < min - 0.004) { min = run; minD = m.d; } }
+  return { a, b0, bal: Core.round2(b0 + ent - sai), ent, sai, min: Core.round2(min), minD };
+}
+function heroAccMonthHtml(I, d, ym) {
+  const fut = ym > CUR_YM, mes = MES_L[+ym.slice(5, 7) - 1].toLowerCase(), tot = Core.round2(sum(I, x => x.bal));
+  const since = I.map(x => x.a.since || TODAY).sort()[0], antes = !fut && ym < since.slice(0, 7); // mês anterior ao cadastro das contas
+  const pos = I.filter(x => x.bal > 0.004), W = sum(pos, x => x.bal) || 1, col = x => accPal(x.a)[2];
+  return `<section class="herox">
+    <div class="lab"><span>${fut ? 'Previsto nas contas no fim de ' : 'Saldo nas contas no fim de '}${mes}</span><button data-act="accopen">Contas</button></div>
+    <div class="num ${tot < -0.004 ? 'neg' : ''}" data-count="${tot}" data-key="saldoacc">${brl(tot)}</div>
+    <p class="sub">${antes ? `As contas foram cadastradas em ${dmy(since)}/${since.slice(0, 4)}: antes disso o app não tem o movimento delas.` : `Começa o mês com ${brl(sum(I, x => x.b0))}, ${fut ? 'entram' : 'entraram'} ${brl(sum(I, x => x.ent))} e ${fut ? 'saem' : 'saíram'} ${brl(sum(I, x => x.sai))}.`}</p>
+    ${I.length > 1 && pos.length ? `<div class="flowx" role="img" aria-label="Saldo por conta">${pos.map(x => `<i style="width:${(x.bal / W * 100).toFixed(2)}%;background:${col(x)}"></i>`).join('')}</div>` : ''}
+    ${I.length > 1 ? `<div class="accsplit">${I.map(x => `<button data-act="accopen" data-id="${esc(x.a.id)}"><i style="background:${col(x)}"></i><span>${esc(x.a.name)}</span><b class="${x.bal < -0.004 ? 'neg' : ''}">${brlK(x.bal)}</b></button>`).join('')}</div>` : ''}
+    <div class="kpis">
+      <button class="kpi" data-act="hopen" data-k="ent" data-ym="${ym}"><span>Entradas</span><b data-count="${d.ent}" data-key="ent" data-fmt="k">${brlK(d.ent)}</b></button>
+      <button class="kpi" data-act="hopen" data-k="sai" data-ym="${ym}"><span>Saídas</span><b data-count="${d.sai}" data-key="sai" data-fmt="k">${brlK(d.sai)}</b></button>
+      <button class="kpi" data-act="hopen" data-k="sai" data-ym="${ym}"><span>Sobra do mês</span><b class="${d.meta < -0.004 ? 'neg' : ''}" data-count="${d.meta}" data-key="sobra" data-fmt="k">${brlK(d.meta)}</b></button>
+    </div>
+  </section>`;
+}
 function accWarnHtml(I) {
   const f = I.filter(x => x.min < -0.004); if (!f.length) return '';
   return `<button class="accwarn home" data-act="accopen" data-id="${esc(f[0].a.id)}">${icon('alert', 16)}<span>${f.map(x => `${esc(x.a.name)}: vai faltar <b>${brl(-x.min)}</b> ${x.minD === TODAY ? 'hoje' : 'em ' + dmy(x.minD)}`).join(' · ')}</span></button>`;
@@ -2117,8 +2142,10 @@ function viewHome() {
   const denom = Math.max(d.ent, d.sai, 1), w = v => (Math.max(0, v) / denom * 100).toFixed(2);
   const csF = M.cardsList(), cardFlow = csF.map(c => { const q = cardPal(c); return ['', csF.length > 1 ? c.name : 'Cartão', M.aPagarForCard(ym, c.id), `background:linear-gradient(90deg,${q[2]},${q[3]})`]; });
   const flow = [...cardFlow, ['fl3', 'VA/VR', vaSai], ['fl1', 'Demais', demais], ['fl4', 'Sobra', Math.max(0, d.meta)]].filter(x => x[2] > 0.004);
-  const accH = ym === CUR_YM && accList().length ? (() => { const mv = accMoves(Core.lastDay(CUR_YM)), cxr = M.cxRows(M.today).rows; return accList().map(a => accInfo(a, mv, cxr)); })() : null;
-  const hero = accH ? heroAccHtml(accH, d, ym) : `<section class="herox">
+  const accH = accList().length ? (ym === CUR_YM
+    ? (() => { const mv = accMoves(Core.lastDay(CUR_YM)), cxr = M.cxRows(M.today).rows; return accList().map(a => accInfo(a, mv, cxr)); })()
+    : (() => { const mv = accMoves(Core.lastDay(ym)); return accList().map(a => accMonthInfo(a, mv, ym)); })()) : null;
+  const hero = accH ? (ym === CUR_YM ? heroAccHtml(accH, d, ym) : heroAccMonthHtml(accH, d, ym)) : `<section class="herox">
     <div class="lab"><span>Saldo de ${mesNome}</span><button data-act="hopen" data-k="sai" data-ym="${ym}">Detalhes</button></div>
     <div class="num ${saldo < -0.004 ? 'neg' : ''}" data-count="${saldo}" data-key="saldo">${brl(saldo)}</div>
     <p class="sub">${subTxt}</p>
@@ -2161,7 +2188,7 @@ function viewHome() {
   const folds = (ins ? fold('ins', 'Saúde financeira e avisos', ins.sum, insightCard()) : '') +
     (cats.length ? fold('cat', 'Para onde foi o dinheiro', `${brl(totC)} · mais em ${esc(top[0].c)}`, catSec.replace(/^<div class="sh">[\s\S]*?<\/div>/, '')) : '') +
     fold('pat', 'Patrimônio', brl(d.total), patSec.replace(/^<div class="sh">[\s\S]*?<\/div>/, ''));
-  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + vaMini + (accH ? accWarnHtml(accH) : '') + qa + gsCard() +
+  return topbar(`${greeting()}${nm ? `, ${esc(nm)}` : ''}`, todayLong()) + monthNav() + hero + vaMini + (accH && ym >= CUR_YM ? accWarnHtml(accH) : '') + qa + gsCard() +
     `<div class="home-grid"><div class="col">${accH ? '' : accountsHomeHtml()}${cardsSec}${recSec}${recentSec}</div><div class="col">${sh('Resumo do mês')}${folds}</div></div>`;
 }
 
